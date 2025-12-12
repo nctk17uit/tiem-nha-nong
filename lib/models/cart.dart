@@ -76,6 +76,32 @@ class CartItem {
     };
   }
 
+  CartItem copyWith({
+    String? id,
+    String? variantId,
+    String? productId,
+    String? productName,
+    String? variantName,
+    String? thumbnailUrl,
+    double? price,
+    int? quantity,
+    int? stockQuantity,
+    bool? isActive,
+  }) {
+    return CartItem(
+      id: id ?? this.id,
+      variantId: variantId ?? this.variantId,
+      productId: productId ?? this.productId,
+      productName: productName ?? this.productName,
+      variantName: variantName ?? this.variantName,
+      thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
+      price: price ?? this.price,
+      quantity: quantity ?? this.quantity,
+      stockQuantity: stockQuantity ?? this.stockQuantity,
+      isActive: isActive ?? this.isActive,
+    );
+  }
+
   // Helper for UI
   double get subtotal => price * quantity;
 }

@@ -143,6 +143,89 @@ class CartController extends Notifier<CartState> {
   void clearState() {
     state = CartState(items: []);
   }
+
+  // --- REMOVE ITEM ---
+  Future<void> removeItem(CartItem item) async {
+    final user = ref.read(authControllerProvider).value;
+    // Optimistic Update: Remove from UI immediately for better UX
+    final previousItems = state.items;
+    state = CartState(
+      items: state.items
+          .where(
+            (i) =>
+                // If logged in, compare ID. If guest, compare Variant ID.
+                user != null ? i.id != item.id : i.variantId != item.variantId,
+          )
+          .toList(),
+      isLoading: true,
+    );
+
+    try {
+      if (user != null) {
+        // 1. Logged In: API (Use Server ID)
+        if (item.id == null) throw "Server item missing ID";
+        await ref.read(cartRepositoryProvider).removeItem(item.id!);
+
+        // Refresh to ensure sync
+        final newItems = await ref.read(cartRepositoryProvider).getCart();
+        state = CartState(items: newItems, isLoading: false);
+      } else {
+        // 2. Guest: Local (Use Variant ID)
+        // We already filtered the list locally above, just save it.
+        await ref.read(cartStorageProvider).saveCart(state.items);
+        state = CartState(items: state.items, isLoading: false);
+      }
+    } catch (e) {
+      // Revert on error
+      state = CartState(items: previousItems, isLoading: false);
+      // Optional: Show error toast
+    }
+  }
+
+  // --- UPDATE QUANTITY ---
+  Future<void> updateQuantity(CartItem item, int newQuantity) async {
+    final user = ref.read(authControllerProvider).value;
+
+    // Validation
+    if (newQuantity < 1) return;
+    if (newQuantity > item.stockQuantity) {
+      // Optional: Toast "Max stock reached"
+      return;
+    }
+
+    // Set loading state (optional, or just handle silently)
+    state = CartState(items: state.items, isLoading: true);
+
+    try {
+      if (user != null) {
+        // 1. Logged In: API (Use Server ID)
+        if (item.id == null) throw "Server item missing ID";
+        await ref
+            .read(cartRepositoryProvider)
+            .updateQuantity(item.id!, newQuantity);
+
+        final newItems = await ref.read(cartRepositoryProvider).getCart();
+        state = CartState(items: newItems, isLoading: false);
+      } else {
+        // 2. Guest: Local (Use Variant ID)
+        final currentItems = [...state.items];
+        final index = currentItems.indexWhere(
+          (i) => i.variantId == item.variantId,
+        );
+
+        if (index != -1) {
+          // Use copyWith to update immutably
+          currentItems[index] = item.copyWith(quantity: newQuantity);
+
+          await ref.read(cartStorageProvider).saveCart(currentItems);
+          state = CartState(items: currentItems, isLoading: false);
+        }
+      }
+    } catch (e) {
+      // Reload strictly to ensure data integrity
+      _loadInitialCart();
+    }
+  }
 }
 
 final cartControllerProvider = NotifierProvider<CartController, CartState>(
