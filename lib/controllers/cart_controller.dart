@@ -144,86 +144,78 @@ class CartController extends Notifier<CartState> {
     state = CartState(items: []);
   }
 
-  // --- REMOVE ITEM ---
+  // --- OPTIMISTIC REMOVE ITEM ---
   Future<void> removeItem(CartItem item) async {
     final user = ref.read(authControllerProvider).value;
-    // Optimistic Update: Remove from UI immediately for better UX
+
+    // 1. SNAPSHOT
     final previousItems = state.items;
-    state = CartState(
-      items: state.items
-          .where(
-            (i) =>
-                // If logged in, compare ID. If guest, compare Variant ID.
-                user != null ? i.id != item.id : i.variantId != item.variantId,
-          )
-          .toList(),
-      isLoading: true,
-    );
+
+    // 2. OPTIMISTIC UPDATE: Remove item immediately
+    final optimisticItems = state.items.where((i) {
+      return user != null ? i.id != item.id : i.variantId != item.variantId;
+    }).toList();
+
+    state = CartState(items: optimisticItems, isLoading: false);
 
     try {
       if (user != null) {
-        // 1. Logged In: API (Use Server ID)
-        if (item.id == null) throw "Server item missing ID";
+        if (item.id == null) throw "ID missing";
         await ref.read(cartRepositoryProvider).removeItem(item.id!);
-
-        // Refresh to ensure sync
-        final newItems = await ref.read(cartRepositoryProvider).getCart();
-        state = CartState(items: newItems, isLoading: false);
       } else {
-        // 2. Guest: Local (Use Variant ID)
-        // We already filtered the list locally above, just save it.
-        await ref.read(cartStorageProvider).saveCart(state.items);
-        state = CartState(items: state.items, isLoading: false);
+        await ref.read(cartStorageProvider).saveCart(optimisticItems);
       }
     } catch (e) {
-      // Revert on error
+      // 3. REVERT on failure
       state = CartState(items: previousItems, isLoading: false);
-      // Optional: Show error toast
     }
   }
 
-  // --- UPDATE QUANTITY ---
+  // --- OPTIMISTIC UPDATE QUANTITY ---
   Future<void> updateQuantity(CartItem item, int newQuantity) async {
     final user = ref.read(authControllerProvider).value;
 
-    // Validation
+    // 1. Validation
     if (newQuantity < 1) return;
-    if (newQuantity > item.stockQuantity) {
-      // Optional: Toast "Max stock reached"
-      return;
-    }
+    if (newQuantity > item.stockQuantity) return; // Optional toast here
 
-    // Set loading state (optional, or just handle silently)
-    state = CartState(items: state.items, isLoading: true);
+    // 2. SNAPSHOT: Save previous list in case we need to revert
+    final previousItems = state.items;
+
+    // 3. OPTIMISTIC UPDATE: Update the UI *immediately* without loading spinner
+    // We create a new list where the specific item has the new quantity
+    final optimisticItems = state.items.map((i) {
+      // Identify item (by Server ID if logged in, or Variant ID if guest)
+      final isTarget = user != null
+          ? i.id == item.id
+          : i.variantId == item.variantId;
+
+      return isTarget ? i.copyWith(quantity: newQuantity) : i;
+    }).toList();
+
+    // Update state NOW (isLoading stays false!)
+    state = CartState(items: optimisticItems, isLoading: false);
 
     try {
       if (user != null) {
-        // 1. Logged In: API (Use Server ID)
-        if (item.id == null) throw "Server item missing ID";
+        // 4a. Logged In: Sync with API
+        if (item.id == null) throw "ID missing";
         await ref
             .read(cartRepositoryProvider)
             .updateQuantity(item.id!, newQuantity);
 
-        final newItems = await ref.read(cartRepositoryProvider).getCart();
-        state = CartState(items: newItems, isLoading: false);
+        // Optional: You can fetch the cart again "silently" to ensure price totals are correct from server
+        // without triggering a loading spinner.
+        // final serverItems = await ref.read(cartRepositoryProvider).getCart();
+        // state = CartState(items: serverItems, isLoading: false);
       } else {
-        // 2. Guest: Local (Use Variant ID)
-        final currentItems = [...state.items];
-        final index = currentItems.indexWhere(
-          (i) => i.variantId == item.variantId,
-        );
-
-        if (index != -1) {
-          // Use copyWith to update immutably
-          currentItems[index] = item.copyWith(quantity: newQuantity);
-
-          await ref.read(cartStorageProvider).saveCart(currentItems);
-          state = CartState(items: currentItems, isLoading: false);
-        }
+        // 4b. Guest: Save to Storage
+        await ref.read(cartStorageProvider).saveCart(optimisticItems);
       }
     } catch (e) {
-      // Reload strictly to ensure data integrity
-      _loadInitialCart();
+      // 5. REVERT on failure
+      state = CartState(items: previousItems, isLoading: false);
+      // Optional: Show Toast "Update failed"
     }
   }
 }
