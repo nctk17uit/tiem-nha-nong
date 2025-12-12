@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 
-// import 'package:mobile/models/cart.dart';
+// Remove Google Fonts as we now use Theme TextStyles
+// import 'package:google_fonts/google_fonts.dart';
+
 import 'package:mobile/utils/elements_format.dart';
 import 'package:mobile/controllers/cart_controller.dart';
 import 'package:mobile/ui/widgets/cart_list.dart';
@@ -12,8 +13,12 @@ class CartPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // 1. THEME DATA
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
     // 2. WATCH STATE
-    // This returns your custom 'CartState' object (which contains items & isLoading)
     final cartState = ref.watch(cartControllerProvider);
     final cartItems = cartState.items;
 
@@ -24,31 +29,31 @@ class CartPage extends ConsumerWidget {
     );
 
     return Scaffold(
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF4CAF50),
+        // Use Primary Color from Theme (usually the Green brand color)
+        backgroundColor: colorScheme.primary,
         elevation: 0,
         toolbarHeight: 56,
+        // Ensure Back Button is readable on Primary color
+        iconTheme: IconThemeData(color: colorScheme.onPrimary),
         title: Text(
           'Giỏ hàng - ${cartItems.length}',
-          style: GoogleFonts.roboto(
-            fontSize: 18,
+          style: textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: colorScheme.onPrimary,
           ),
         ),
         centerTitle: true,
       ),
 
       // 4. MAIN CONTENT
-      // Prioritize Loading -> Empty -> List
       body: cartState.isLoading
           ? const Center(child: CircularProgressIndicator())
           : cartItems.isEmpty
           ? _buildEmptyState(context)
           : CartList(
               cartItems: cartItems,
-              // ACTION: Pass the *whole item* so the controller can check
-              // if it needs to use 'id' (Server) or 'variantId' (Guest)
               onRemoveItem: (item) {
                 ref.read(cartControllerProvider.notifier).removeItem(item);
               },
@@ -72,6 +77,10 @@ class CartPage extends ConsumerWidget {
   // --- WIDGETS ---
 
   Widget _buildEmptyState(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -81,37 +90,37 @@ class CartPage extends ConsumerWidget {
             height: 80,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.grey[400]!, width: 4),
+              border: Border.all(color: colorScheme.outline, width: 4),
             ),
             child: Icon(
               Icons.sentiment_very_dissatisfied,
               size: 50,
-              color: Colors.grey[400],
+              color: colorScheme.outline,
             ),
           ),
           const SizedBox(height: 24),
           Text(
             'Giỏ hàng đang trống',
-            style: GoogleFonts.roboto(
-              fontSize: 16,
+            style: textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
-              color: Colors.black87,
+              color: colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Mua sắm thêm để\nkhông bỏ lỡ những ưu đãi của Tiệm Nhà Nông!!!',
             textAlign: TextAlign.center,
-            style: GoogleFonts.roboto(
-              fontSize: 13,
-              color: Colors.grey[600],
+            style: textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant,
               height: 1.5,
             ),
           ),
           const SizedBox(height: 24),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange[700],
+              // Use Primary color for the main Call-To-Action
+              backgroundColor: colorScheme.primary,
+              foregroundColor: colorScheme.onPrimary,
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(24),
@@ -120,10 +129,9 @@ class CartPage extends ConsumerWidget {
             onPressed: () => Navigator.pop(context),
             child: Text(
               'Mua sắm ngay',
-              style: GoogleFonts.roboto(
+              style: textTheme.labelLarge?.copyWith(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: Colors.white,
               ),
             ),
           ),
@@ -137,11 +145,17 @@ class CartPage extends ConsumerWidget {
     bool isEmpty,
     double totalPrice,
   ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
     return Container(
       height: 60,
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey[300]!, width: 1)),
+        color: colorScheme.surface,
+        border: Border(
+          top: BorderSide(color: colorScheme.outlineVariant, width: 1),
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -150,17 +164,17 @@ class CartPage extends ConsumerWidget {
           children: [
             Text(
               PriceFormatter.format(totalPrice),
-              style: GoogleFonts.roboto(
-                fontSize: 16,
+              style: textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w600,
-                color: Colors.black87,
+                color: colorScheme.onSurface,
               ),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: isEmpty
-                    ? Colors.grey[400]
-                    : Colors.orange[700],
+                // Active color = Primary.
+                // Disabled color is handled automatically by Flutter when onPressed is null.
+                backgroundColor: colorScheme.primary,
+                foregroundColor: colorScheme.onPrimary,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 28,
                   vertical: 10,
@@ -177,10 +191,8 @@ class CartPage extends ConsumerWidget {
                     },
               child: Text(
                 'Mua hàng',
-                style: GoogleFonts.roboto(
-                  fontSize: 13,
+                style: textTheme.labelLarge?.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: Colors.white,
                 ),
               ),
             ),

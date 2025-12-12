@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
 import 'package:mobile/models/cart.dart';
@@ -30,6 +29,11 @@ class CartList extends StatelessWidget {
   }
 
   Widget _buildProductCard(BuildContext context, CartItem item) {
+    // 1. Access Theme Data
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
     return Slidable(
       key: ValueKey(item.id ?? item.variantId),
       endActionPane: ActionPane(
@@ -45,14 +49,17 @@ class CartList extends StatelessWidget {
                 ),
               );
             },
+            // Keep Orange for "Similar" as it's likely a specific action color,
+            // or use colorScheme.tertiary if you have it defined.
             backgroundColor: Colors.orange,
             foregroundColor: Colors.white,
             icon: Icons.collections,
           ),
           SlidableAction(
             onPressed: (context) => onRemoveItem(item),
-            backgroundColor: Colors.red,
-            foregroundColor: Colors.white,
+            // Use semantic Error color for delete
+            backgroundColor: colorScheme.error,
+            foregroundColor: colorScheme.onError,
             icon: Icons.delete,
           ),
         ],
@@ -61,29 +68,32 @@ class CartList extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 12),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey[300]!, width: 1),
+          // Use Surface color (White in light mode, Dark Grey in dark mode)
+          color: colorScheme.surface,
+          // Use Outline Variant for subtle borders
+          border: Border.all(color: colorScheme.outlineVariant, width: 1),
           borderRadius: BorderRadius.circular(8),
-          color: Colors.white,
         ),
         child: Row(
           children: [
-            // 1. PRODUCT IMAGE (With Placeholder Logic)
+            // 1. PRODUCT IMAGE
             Container(
               width: 70,
               height: 70,
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey[400]!, width: 1),
+                border: Border.all(color: colorScheme.outlineVariant, width: 1),
                 borderRadius: BorderRadius.circular(8),
-                color: Colors.grey[100], // Background color for placeholder
+                // Use a slightly darker surface for placeholder background
+                color: colorScheme.surfaceContainerHighest,
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(7),
-                child: _buildImage(item.thumbnailUrl),
+                child: _buildImage(context, item.thumbnailUrl),
               ),
             ),
             const SizedBox(width: 12),
 
-            // 2. Product Info
+            // 2. PRODUCT INFO
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -96,10 +106,10 @@ class CartList extends StatelessWidget {
                           item.productName,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.roboto(
-                            fontSize: 13,
+                          // Use standard text styles
+                          style: textTheme.bodyLarge?.copyWith(
                             fontWeight: FontWeight.w500,
-                            color: Colors.black87,
+                            color: colorScheme.onSurface,
                           ),
                         ),
                       ),
@@ -110,10 +120,10 @@ class CartList extends StatelessWidget {
                         },
                         child: Text(
                           'Sửa',
-                          style: GoogleFonts.roboto(
-                            fontSize: 12,
+                          style: textTheme.labelLarge?.copyWith(
                             fontWeight: FontWeight.w600,
-                            color: Colors.blue,
+                            // Use Primary color (usually Blue/Green) for actions
+                            color: colorScheme.primary,
                           ),
                         ),
                       ),
@@ -122,9 +132,8 @@ class CartList extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     item.variantName,
-                    style: GoogleFonts.roboto(
-                      fontSize: 12,
-                      color: Colors.grey[600],
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -133,10 +142,9 @@ class CartList extends StatelessWidget {
                     children: [
                       Text(
                         PriceFormatter.format(item.price),
-                        style: GoogleFonts.roboto(
-                          fontSize: 13,
+                        style: textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w600,
-                          color: Colors.black87,
+                          color: colorScheme.onSurface,
                         ),
                       ),
                       SizedBox(
@@ -145,6 +153,7 @@ class CartList extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             _buildQtyBtn(
+                              context,
                               icon: Icons.remove,
                               onTap: () =>
                                   onUpdateQuantity(item, item.quantity - 1),
@@ -154,7 +163,7 @@ class CartList extends StatelessWidget {
                               height: 30,
                               decoration: BoxDecoration(
                                 border: Border.all(
-                                  color: Colors.grey[400]!,
+                                  color: colorScheme.outline,
                                   width: 1,
                                 ),
                                 borderRadius: BorderRadius.circular(4),
@@ -162,13 +171,13 @@ class CartList extends StatelessWidget {
                               alignment: Alignment.center,
                               child: Text(
                                 item.quantity.toString(),
-                                style: GoogleFonts.roboto(
-                                  fontSize: 12,
+                                style: textTheme.bodyMedium?.copyWith(
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ),
                             _buildQtyBtn(
+                              context,
                               icon: Icons.add,
                               onTap: () =>
                                   onUpdateQuantity(item, item.quantity + 1),
@@ -187,50 +196,55 @@ class CartList extends StatelessWidget {
     );
   }
 
-  /// Helper to safely build the image or the placeholder
-  Widget _buildImage(String? url) {
-    // 1. If URL is null or empty, return Placeholder immediately
+  Widget _buildImage(BuildContext context, String? url) {
     if (url == null || url.isEmpty) {
-      return _buildPlaceholder();
+      return _buildPlaceholder(context);
     }
-
-    // 2. Try to load image
     return Image.network(
       url,
       fit: BoxFit.cover,
-      // 3. If loading fails (404, no internet), return Placeholder
       errorBuilder: (context, error, stackTrace) {
-        return _buildPlaceholder();
+        return _buildPlaceholder(context);
       },
     );
   }
 
-  /// The reusable Placeholder widget (Grey Icon)
-  Widget _buildPlaceholder() {
+  Widget _buildPlaceholder(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
-      color: Colors.grey[100],
+      color: colorScheme.surfaceContainerHighest,
       child: Center(
         child: Icon(
-          Icons.image_not_supported_outlined, // Better icon for missing images
-          color: Colors.grey[400],
+          Icons.image_not_supported_outlined,
+          color: colorScheme.onSurfaceVariant,
           size: 24,
         ),
       ),
     );
   }
 
-  Widget _buildQtyBtn({required IconData icon, required VoidCallback onTap}) {
+  Widget _buildQtyBtn(
+    BuildContext context, {
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: 30,
         height: 30,
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey[400]!, width: 1),
+          border: Border.all(color: colorScheme.outline, width: 1),
           borderRadius: BorderRadius.circular(4),
         ),
         alignment: Alignment.center,
-        child: Icon(icon, size: 18, color: Colors.grey[700]),
+        child: Icon(
+          icon,
+          size: 18,
+          color: colorScheme.onSurface, // Adapts to dark mode
+        ),
       ),
     );
   }
