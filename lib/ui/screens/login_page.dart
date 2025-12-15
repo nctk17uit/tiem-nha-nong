@@ -42,9 +42,23 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         );
       }
     } else if (state.value != null) {
-      // 3. Success: Navigate
+      // 3. Success: Check for Redirect Intent
       if (mounted) {
-        context.go('/profile');
+        // Retrieve the 'extra' data passed from GoRouter
+        final redirectPath = GoRouterState.of(context).extra as String?;
+
+        if (redirectPath != null) {
+          // Case A: Came from Cart -> Go to Checkout (Replace Login in stack)
+          context.replace(redirectPath);
+        } else {
+          // Case B: Came from Profile -> Go back to Profile
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            // Fallback if no history exists
+            context.go('/home');
+          }
+        }
       }
     }
   }
@@ -56,6 +70,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
     final primaryColor = colorScheme.primary;
+
+    // FIX 2: Capture the extra parameter at the start of build so we can forward it
+    final redirectPath = GoRouterState.of(context).extra as String?;
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
@@ -200,7 +217,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   ),
                   GestureDetector(
                     onTap: () {
-                      context.push('/register');
+                      // FIX 3: Forward the redirect path to Register Page
+                      // context.push('/register', extra: redirectPath);
+
+                      // FIX: Use pushReplacement instead of push
+                      // This removes 'Login' from the stack and puts 'Register' in its place.
+                      context.pushReplacement('/register', extra: redirectPath);
                     },
                     child: Text(
                       'Đăng ký ngay',

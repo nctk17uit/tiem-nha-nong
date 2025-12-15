@@ -11,6 +11,7 @@ import 'package:mobile/ui/screens/update_info_page.dart';
 import 'package:mobile/ui/screens/change_password_page.dart';
 import 'package:mobile/ui/screens/address_list_page.dart';
 import 'package:mobile/ui/screens/add_edit_address_page.dart';
+import 'package:mobile/ui/screens/checkout_page.dart';
 import 'package:mobile/ui/screens/splash_page.dart';
 import 'package:mobile/ui/screens/home_page.dart';
 import 'package:mobile/ui/screens/profile_page.dart';
@@ -46,8 +47,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/verify-code',
         builder: (context, state) {
-          final email = state.extra as String?;
-          return VerificationPage(email: email ?? '');
+          // Cast the extra object to Map
+          final args = state.extra as Map<String, dynamic>;
+          return VerificationPage(args: args);
         },
       ),
       GoRoute(
@@ -81,6 +83,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           final address = state.extra as ShippingAddress?;
           return AddEditAddressPage(address: address);
         },
+      ),
+
+      GoRoute(
+        path: '/checkout',
+        builder: (context, state) => const CheckoutPage(),
       ),
       // --- MAIN APP SHELL (Bottom Nav) ---
       StatefulShellRoute.indexedStack(

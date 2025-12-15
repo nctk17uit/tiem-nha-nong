@@ -50,9 +50,9 @@ class CartItem {
       productId: json['productId'],
       productName: json['productName'],
       variantName: json['variantName'],
-      thumbnailUrl: json['thumbnailUrl'],
+      thumbnailUrl: json['thumbnail'],
 
-      // --- FIX: Robust Parsing for Local Storage ---
+      // FIX: Robust Parsing for Local Storage
       // This prevents the crash if local storage saved price as "3000.00"
       price: double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,
 

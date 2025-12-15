@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-// Remove Google Fonts as we now use Theme TextStyles
-// import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:mobile/utils/elements_format.dart';
 import 'package:mobile/controllers/cart_controller.dart';
+import 'package:mobile/controllers/auth_controller.dart';
 import 'package:mobile/ui/widgets/cart_list.dart';
 
 class CartPage extends ConsumerWidget {
@@ -18,9 +17,13 @@ class CartPage extends ConsumerWidget {
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
 
-    // 2. WATCH STATE
+    // 2. WATCH STATE (Cart & Auth)
     final cartState = ref.watch(cartControllerProvider);
     final cartItems = cartState.items;
+
+    // Check if user is logged in
+    final userState = ref.watch(authControllerProvider);
+    final isLoggedIn = userState.value != null;
 
     // 3. CALCULATE TOTAL
     final double totalPrice = cartItems.fold(
@@ -31,11 +34,9 @@ class CartPage extends ConsumerWidget {
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        // Use Primary Color from Theme (usually the Green brand color)
         backgroundColor: colorScheme.primary,
         elevation: 0,
         toolbarHeight: 56,
-        // Ensure Back Button is readable on Primary color
         iconTheme: IconThemeData(color: colorScheme.onPrimary),
         title: Text(
           'Giỏ hàng - ${cartItems.length}',
@@ -70,6 +71,7 @@ class CartPage extends ConsumerWidget {
         context,
         cartItems.isEmpty,
         totalPrice,
+        isLoggedIn, // Pass login state to bottom bar
       ),
     );
   }
@@ -118,7 +120,6 @@ class CartPage extends ConsumerWidget {
           const SizedBox(height: 24),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              // Use Primary color for the main Call-To-Action
               backgroundColor: colorScheme.primary,
               foregroundColor: colorScheme.onPrimary,
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
@@ -126,7 +127,8 @@ class CartPage extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(24),
               ),
             ),
-            onPressed: () => Navigator.pop(context),
+            onPressed: () =>
+                context.go('/home'), // Use .go to return to main tab
             child: Text(
               'Mua sắm ngay',
               style: textTheme.labelLarge?.copyWith(
@@ -144,55 +146,80 @@ class CartPage extends ConsumerWidget {
     BuildContext context,
     bool isEmpty,
     double totalPrice,
+    bool isLoggedIn,
   ) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
 
     return Container(
-      height: 60,
+      height: 80, // Increased slightly for better tap area
       decoration: BoxDecoration(
         color: colorScheme.surface,
         border: Border(
           top: BorderSide(color: colorScheme.outlineVariant, width: 1),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            offset: const Offset(0, -2),
+            blurRadius: 10,
+          ),
+        ],
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              PriceFormatter.format(totalPrice),
-              style: textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: colorScheme.onSurface,
-              ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Tổng cộng',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                Text(
+                  PriceFormatter.format(totalPrice),
+                  style: textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: Colors.red[700], // Highlight price
+                  ),
+                ),
+              ],
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                // Active color = Primary.
-                // Disabled color is handled automatically by Flutter when onPressed is null.
                 backgroundColor: colorScheme.primary,
                 foregroundColor: colorScheme.onPrimary,
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 28,
-                  vertical: 10,
+                  horizontal: 32,
+                  vertical: 12,
                 ),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(24),
                 ),
+                elevation: 2,
               ),
               onPressed: isEmpty
                   ? null
                   : () {
-                      // TODO: Navigate to Payment/Checkout Screen
-                      // Navigator.pushNamed(context, '/checkout');
+                      if (isLoggedIn) {
+                        // 1. Logged in -> Go to Checkout
+                        context.push('/checkout');
+                      } else {
+                        // 2. Not Logged in -> Go to Login, then Redirect to Checkout
+                        context.push('/login', extra: '/checkout');
+                      }
                     },
               child: Text(
-                'Mua hàng',
+                'Thanh toán',
                 style: textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
                 ),
               ),
             ),

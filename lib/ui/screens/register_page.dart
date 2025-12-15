@@ -45,8 +45,26 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
     // 4. Navigate on Success using GoRouter
     if (success && mounted) {
-      // Pass the email to the Verify page so the user doesn't have to re-type it
-      context.push('/verify-code', extra: email);
+      // FIX 4: Retrieve the redirect path forwarded from Login Page
+      final redirectPath = GoRouterState.of(context).extra as String?;
+
+      // Forward both the Email AND the Redirect Path
+      // Since GoRouter 'extra' typically takes one object, we can pass a Map or
+      // handle the state differently. However, for simplicity here, let's assume
+      // our VerifyPage can accept a Map or a custom arguments class.
+
+      // context.push(
+      //   '/verify-code',
+      //   extra: {'email': email, 'redirect': redirectPath},
+      // );
+
+      // FIX: Use pushReplacement to swap Register with Verify
+      // Stack before: [Cart, Register]
+      // Stack after:  [Cart, Verify]
+      context.pushReplacement(
+        '/verify-code',
+        extra: {'email': email, 'redirect': redirectPath},
+      );
     }
   }
 
@@ -177,6 +195,33 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
               ),
 
               const SizedBox(height: 18),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Đã có tài khoản? ',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      // Retrieve the redirect path again to keep passing it around
+                      final redirectPath =
+                          GoRouterState.of(context).extra as String?;
+
+                      // Swap back to Login
+                      context.pushReplacement('/login', extra: redirectPath);
+                    },
+                    child: Text(
+                      'Đăng nhập',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),

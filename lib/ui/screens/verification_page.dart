@@ -5,8 +5,12 @@ import 'package:go_router/go_router.dart';
 import 'package:mobile/controllers/auth_controller.dart';
 
 class VerificationPage extends ConsumerStatefulWidget {
-  final String email;
-  const VerificationPage({super.key, required this.email});
+  // Update to accept Map or separate fields.
+  // For simplicity with GoRouter 'extra', let's take the dynamic extra directly
+  // or you can parse it in the router. Here I assume 'extra' is passed as a Map.
+  final Map<String, dynamic> args;
+
+  const VerificationPage({super.key, required this.args});
 
   @override
   ConsumerState<VerificationPage> createState() => _VerificationPageState();
@@ -25,8 +29,8 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
   Timer? _timer;
 
   // UI States
-  bool _isVerified = false; // Controls the Success Screen overlay
-  bool _isLoading = false; // Controls the API call state
+  bool _isVerified = false;
+  bool _isLoading = false;
   late AnimationController _successAnimCtrl;
 
   @override
@@ -64,11 +68,9 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
   void _onChanged(String v, int index) {
     if (v.isEmpty) return;
 
-    // Keep only the first character typed
     final ch = v.substring(0, 1);
     _controllers[index].text = ch;
 
-    // Move focus to next field
     if (index < _focusNodes.length - 1) {
       _focusNodes[index + 1].requestFocus();
     } else {
@@ -86,11 +88,12 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
 
       setState(() => _isLoading = true);
 
+      // Extract Email from args
+      final email = widget.args['email'] as String;
+
       try {
-        // 1. Call Controller (Now it throws if failed)
-        await ref
-            .read(authControllerProvider.notifier)
-            .verifyCode(widget.email, code);
+        // 1. Call Controller
+        await ref.read(authControllerProvider.notifier).verifyCode(email, code);
 
         // 2. Success Animation
         if (mounted) {
@@ -100,17 +103,22 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
           });
           _successAnimCtrl.forward();
 
-          // 3. FORCE NAVIGATION TO PROFILE
+          // 3. FORCE NAVIGATION TO REDIRECT PATH
           Future.delayed(const Duration(seconds: 2), () {
             if (mounted) {
-              // Use .go() to clear the stack (removes Register/Login screens)
-              // Change '/profile' to '/' if you want to go to Home instead.
-              context.go('/profile');
+              // FIX 5: Retrieve Redirect Path from args
+              final redirectPath = widget.args['redirect'] as String?;
+
+              if (redirectPath != null) {
+                context.replace(redirectPath); // Go to Checkout
+              } else {
+                context.go('/home'); // Default behavior
+              }
             }
           });
         }
       } catch (e) {
-        // 4. Error Handling (Wrong Code)
+        // 4. Error Handling
         if (mounted) {
           setState(() => _isLoading = false);
 
@@ -129,8 +137,6 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
   }
 
   void _resend() async {
-    // TODO: Implement actual resend API call here
-    // For now, we simulate sending by resetting the timer
     for (final c in _controllers) c.clear();
     _focusNodes[0].requestFocus();
     _startTimer();
@@ -146,7 +152,9 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
 
-    // --- SUCCESS OVERLAY ---
+    // Extract Email for display
+    final email = widget.args['email'] as String;
+
     if (_isVerified) {
       return Scaffold(
         backgroundColor: colorScheme.surface,
@@ -166,7 +174,6 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
                   height: 80,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    // Lighter green background
                     color: colorScheme.primaryContainer,
                   ),
                   child: Icon(
@@ -190,7 +197,6 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
       );
     }
 
-    // --- MAIN FORM ---
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
@@ -208,7 +214,6 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const SizedBox(height: 12),
-
               // Logo
               Container(
                 width: 72,
@@ -247,7 +252,7 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
               ),
               const SizedBox(height: 8),
               Text(
-                'Nhập mã xác thực đã được gửi đến:\n${widget.email}',
+                'Nhập mã xác thực đã được gửi đến:\n$email',
                 textAlign: TextAlign.center,
                 style: textTheme.bodyMedium?.copyWith(
                   color: colorScheme.onSurfaceVariant,
@@ -256,7 +261,6 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
 
               const SizedBox(height: 30),
 
-              // PIN INPUTS
               if (_isLoading)
                 const CircularProgressIndicator()
               else
@@ -270,7 +274,6 @@ class _VerificationPageState extends ConsumerState<VerificationPage>
 
               const SizedBox(height: 30),
 
-              // TIMER & RESEND
               Text(
                 _seconds > 0
                     ? 'Gửi lại trong: ${_seconds}s'
