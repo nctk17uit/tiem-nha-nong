@@ -7,6 +7,8 @@ import 'package:mobile/ui/screens/register_page.dart';
 import 'package:mobile/ui/screens/verification_page.dart';
 import 'package:mobile/ui/screens/forgot_password_page.dart';
 import 'package:mobile/ui/screens/reset_password_page.dart';
+import 'package:mobile/ui/screens/update_info_page.dart';
+import 'package:mobile/ui/screens/change_password_page.dart';
 import 'package:mobile/ui/screens/splash_page.dart';
 import 'package:mobile/ui/screens/home_page.dart';
 import 'package:mobile/ui/screens/profile_page.dart';
@@ -56,6 +58,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           final email = state.extra as String?;
           return ResetPasswordPage(email: email ?? '');
         },
+      ),
+      GoRoute(
+        path: '/profile/update-info',
+        builder: (context, state) => const UpdateInfoPage(),
+      ),
+      GoRoute(
+        path: '/profile/change-password',
+        builder: (context, state) => const ChangePasswordPage(),
       ),
       // --- MAIN APP SHELL (Bottom Nav) ---
       StatefulShellRoute.indexedStack(

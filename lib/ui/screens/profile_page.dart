@@ -51,11 +51,7 @@ class ProfilePage extends ConsumerWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      Icons.lock_outline,
-                      size: 72,
-                      color: Colors.grey[700],
-                    ),
+                    Icon(Icons.lock_outline, size: 72, color: Colors.grey[700]),
                     const SizedBox(height: 18),
                     Text(
                       'Đăng nhập để tiếp tục',
@@ -124,7 +120,6 @@ class ProfilePage extends ConsumerWidget {
 
     return Scaffold(
       body: SafeArea(
-        // CHANGE: Use Column + Expanded to separate ScrollView from Bottom Button
         child: Column(
           children: [
             Expanded(
@@ -144,7 +139,11 @@ class ProfilePage extends ConsumerWidget {
                                 height: 56,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white, width: 2),
+                                  color: Colors.white,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 2,
+                                  ),
                                 ),
                                 child: ClipOval(
                                   child: _buildOfflineAvatar(user.name),
@@ -176,15 +175,10 @@ class ProfilePage extends ConsumerWidget {
                                   ],
                                 ),
                               ),
+                              // EDIT INFO BUTTON
                               GestureDetector(
                                 onTap: () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Chức năng chỉnh sửa đang phát triển',
-                                      ),
-                                    ),
-                                  );
+                                  context.push('/profile/update-info');
                                 },
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
@@ -211,7 +205,7 @@ class ProfilePage extends ConsumerWidget {
                       ),
                     ),
 
-                    // --- PERSONAL INFO ---
+                    // --- PERSONAL INFO (Fixed Duplication) ---
                     Padding(
                       padding: const EdgeInsets.all(16),
                       child: Column(
@@ -227,20 +221,64 @@ class ProfilePage extends ConsumerWidget {
                           const SizedBox(height: 12),
                           Container(
                             width: double.infinity,
-                            padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
                               border: Border.all(color: Colors.grey[300]!),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  'Email: ${user.email}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[700],
+                                // 1. Phone Number (Replaces Duplicate Email)
+                                ListTile(
+                                  leading: const Icon(
+                                    Icons.phone_android,
+                                    color: Colors.grey,
                                   ),
+                                  title: const Text(
+                                    'Số điện thoại',
+                                    style: TextStyle(fontSize: 13),
+                                  ),
+                                  subtitle: Text(
+                                    (user.phoneNumber != null &&
+                                            user.phoneNumber!.isNotEmpty)
+                                        ? user.phoneNumber!
+                                        : 'Chưa cập nhật',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  dense: true,
+                                ),
+                                const Divider(
+                                  height: 1,
+                                  indent: 16,
+                                  endIndent: 16,
+                                ),
+
+                                // 2. Change Password Link
+                                ListTile(
+                                  leading: const Icon(
+                                    Icons.lock_outline,
+                                    color: Colors.grey,
+                                  ),
+                                  title: const Text(
+                                    'Mật khẩu',
+                                    style: TextStyle(fontSize: 13),
+                                  ),
+                                  subtitle: const Text(
+                                    '*********',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  trailing: const Icon(
+                                    Icons.arrow_forward_ios,
+                                    size: 14,
+                                    color: Colors.grey,
+                                  ),
+                                  dense: true,
+                                  onTap: () {
+                                    context.push('/profile/change-password');
+                                  },
                                 ),
                               ],
                             ),
@@ -287,14 +325,13 @@ class ProfilePage extends ConsumerWidget {
                         ],
                       ),
                     ),
-                    // Add bottom padding inside scroll view so content isn't cut off
                     const SizedBox(height: 24),
                   ],
                 ),
               ),
             ),
 
-            // --- STICKY LOGOUT BUTTON ---
+            // --- LOGOUT BUTTON ---
             Padding(
               padding: const EdgeInsets.all(16),
               child: OutlinedButton.icon(
@@ -321,8 +358,7 @@ class ProfilePage extends ConsumerWidget {
     );
   }
 
-  // --- HELPERS (Unchanged) ---
-
+  // --- HELPERS ---
   Widget _buildShoppingInfoCard(String label, IconData icon) {
     return Expanded(
       child: Column(
@@ -340,7 +376,7 @@ class ProfilePage extends ConsumerWidget {
           Text(
             label,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 11, color: Colors.grey[700]),
+            style: const TextStyle(fontSize: 11, color: Colors.grey),
           ),
         ],
       ),

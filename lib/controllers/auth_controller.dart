@@ -144,6 +144,42 @@ class AuthController extends AsyncNotifier<User?> {
     }
   }
 
+  Future<void> updateProfile({
+    required String name,
+    required String phone,
+  }) async {
+    state = const AsyncValue.loading();
+    try {
+      final repo = ref.read(authRepositoryProvider);
+
+      // 1. Call API
+      final updatedUser = await repo.updateProfile(name: name, phone: phone);
+
+      // 2. Update Local State immediately
+      state = AsyncValue.data(updatedUser);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      rethrow;
+    }
+  }
+
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    // We don't set global 'loading' here to avoid rebuilding the whole profile page
+    // The UI will handle the specific button loading state if needed
+    try {
+      final repo = ref.read(authRepositoryProvider);
+      await repo.changePassword(
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   // --- HELPER: Shared Logic for Login & Verify ---
   Future<User> _handleAuthSuccess(Map<String, dynamic> data) async {
     final storage = ref.read(storageProvider);

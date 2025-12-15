@@ -98,6 +98,36 @@ class AuthRepository {
       throw message;
     }
   }
+
+  Future<User> updateProfile({
+    required String name,
+    required String phone,
+  }) async {
+    try {
+      final response = await _dio.put(
+        '/auth/me',
+        data: {'name': name, 'phone_number': phone},
+      );
+      // Backend should return the updated user object
+      return User.fromJson(response.data);
+    } on DioException catch (e) {
+      throw e.response?.data['message'] ?? 'Cập nhật thất bại';
+    }
+  }
+
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      await _dio.put(
+        '/auth/change-password',
+        data: {'old_password': currentPassword, 'new_password': newPassword},
+      );
+    } on DioException catch (e) {
+      throw e.response?.data['message'] ?? 'Đổi mật khẩu thất bại';
+    }
+  }
 }
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {

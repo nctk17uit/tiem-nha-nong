@@ -20,7 +20,7 @@ class User {
       id: json['userId']?.toString() ?? '',
       email: json['email'] ?? '',
       name: json['name'] ?? 'Unknown',
-      phoneNumber: json['phoneNumber'] ?? '',
+      phoneNumber: json['phone_number'] ?? '',
       role: json['role'] ?? 'customer',
       // safely handle null or missing booleans
       isLocked: json['isLocked'] == true,
