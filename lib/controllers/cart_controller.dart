@@ -4,6 +4,7 @@ import '../models/product.dart'; // Need Product/Variant models for adding
 import '../repositories/cart_repository.dart';
 import '../services/cart_storage.dart';
 import 'auth_controller.dart'; // To check login state
+import 'package:flutter/foundation.dart';
 
 class CartState {
   final List<CartItem> items;
@@ -18,19 +19,31 @@ class CartState {
 class CartController extends Notifier<CartState> {
   @override
   CartState build() {
-    // Initial Load
-    _loadInitialCart();
+    // 1. Return initial state immediately
+    // 2. Fire the async method strictly as a side effect
+    Future(() => _loadInitialCart());
+
     return CartState(isLoading: true);
   }
 
   Future<void> _loadInitialCart() async {
+    if (kDebugMode) {
+      print("DEBUG: _loadInitialCart STARTED");
+    }
     final user = ref.read(authControllerProvider).value;
     List<CartItem> items = [];
 
     try {
       if (user != null) {
         // Logged In: Load from API
-        items = await ref.read(cartRepositoryProvider).getCart();
+        // items = await ref.read(cartRepositoryProvider).getCart();
+
+        // 1. LOGGED IN: Try to fetch from API with a 5-second timeout
+        // If server is down, this throws an error after 5 seconds instead of waiting forever.
+        items = await ref
+            .read(cartRepositoryProvider)
+            .getCart()
+            .timeout(const Duration(seconds: 5));
       } else {
         // Guest: Load from Local Storage
         items = await ref.read(cartStorageProvider).loadCart();

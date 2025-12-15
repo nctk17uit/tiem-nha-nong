@@ -26,18 +26,19 @@ class AuthController extends AsyncNotifier<User?> {
       // 2. Token exists: Try to fetch profile
       // The Interceptor will handle 401s and Auto-Refresh transparently here.
       final repo = ref.read(authRepositoryProvider);
-      final user = await repo.getUserProfile();
+      // final user = await repo.getUserProfile();
+
+      // If server is down, fail fast after 5 seconds instead of hanging.
+      final user = await repo.getUserProfile().timeout(
+        const Duration(seconds: 5),
+      );
+
       return user;
     } catch (e) {
       // 3. IMPROVED ERROR HANDLING
-      // If the error is a DioException, check if it's a network issue
-      if (e is DioException) {
-        // If it's a connection error (No Internet), DO NOT logout.
-        // Throw the error so the UI shows a "Retry" button.
-        if (e.type == DioExceptionType.connectionError ||
-            e.type == DioExceptionType.receiveTimeout) {
-          rethrow;
-        }
+      if (e is DioException || e is TimeoutException) {
+        print("Auth Check Failed (Offline/Timeout): $e");
+        return null;
       }
 
       // If it's a 401 (Refresh failed) or any other logic error,
