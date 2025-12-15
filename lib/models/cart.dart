@@ -7,7 +7,7 @@ class CartItem {
   final String? thumbnailUrl;
   final double price;
   final int quantity;
-  final int stockQuantity; // For validation
+  final int stockQuantity;
   final bool isActive;
 
   const CartItem({
@@ -49,10 +49,13 @@ class CartItem {
       variantId: json['variantId'],
       productId: json['productId'],
       productName: json['productName'],
-      variantName: json['variantName'],
-      thumbnailUrl: json['thumbnail'],
 
-      // FIX: Robust Parsing for Local Storage
+      variantName: json['variantName'],
+      // 1. Try 'thumbnailUrl' (standard local save format)
+      // 2. Fallback to 'thumbnail' (format from Product API)
+      thumbnailUrl: json['thumbnailUrl'] ?? json['thumbnail'],
+
+      // Robust Parsing for Local Storage
       // This prevents the crash if local storage saved price as "3000.00"
       price: double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,
 

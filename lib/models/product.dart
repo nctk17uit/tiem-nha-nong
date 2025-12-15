@@ -51,14 +51,18 @@ class ProductVariant {
   final String name;
   final String sku;
   final double price;
-  final int stock;
+
+  // --- UPDATED FIELDS ---
+  final int stockQuantity; // Renamed from 'stock' to match frontend usage
+  final bool isActive; // Added to handle unavailable items
 
   ProductVariant({
     required this.id,
     required this.name,
     required this.sku,
     required this.price,
-    required this.stock,
+    required this.stockQuantity,
+    required this.isActive,
   });
 
   factory ProductVariant.fromJson(Map<String, dynamic> json) {
@@ -66,9 +70,17 @@ class ProductVariant {
       id: json['variant_id'] ?? '',
       name: json['name'] ?? '',
       sku: json['sku'] ?? '',
-      // FIX: Robust parsing for Price (String or Number)
+
+      // FIX: Robust parsing for Price
       price: double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,
-      stock: json['stock_quantity'] ?? json['stock'] ?? 0,
+
+      // FIX: Robust parsing for Stock (Handle String vs Int)
+      // Backend key is 'stock_quantity' based on your SQL
+      stockQuantity:
+          int.tryParse(json['stock_quantity']?.toString() ?? '0') ?? 0,
+
+      // FIX: Added isActive parsing
+      isActive: json['is_active'] ?? true,
     );
   }
 }
@@ -80,7 +92,7 @@ class Product {
   final String id;
   final String name;
   final double price;
-  final int stock;
+  final int stock; // Top-level stock (optional if variants exist)
   final String? thumbnailUrl;
   final bool hasVariants;
   final bool isActive;
@@ -119,7 +131,7 @@ class Product {
       );
     }
 
-    // 2. Parse Images (If present)
+    // 2. Parse Images
     List<ProductImage> parsedImages = [];
     if (json['images'] != null) {
       parsedImages = (json['images'] as List)
@@ -127,7 +139,7 @@ class Product {
           .toList();
     }
 
-    // 3. Parse Variants (If present)
+    // 3. Parse Variants
     List<ProductVariant> parsedVariants = [];
     if (json['variants'] != null) {
       parsedVariants = (json['variants'] as List)
@@ -135,22 +147,35 @@ class Product {
           .toList();
     }
 
+    // --- Smart Thumbnail Logic ---
+    String? finalThumbnail = json['thumbnail_url'] ?? json['thumbnail'];
+
+    // If direct keys are missing, look inside the 'images' list
+    if (finalThumbnail == null && parsedImages.isNotEmpty) {
+      // Try to find one marked as 'isThumbnail'
+      final thumbObj = parsedImages.firstWhere(
+        (img) => img.isThumbnail,
+        orElse: () => parsedImages.first,
+      );
+      finalThumbnail = thumbObj.url;
+    }
+
     return Product(
       id: json['product_id'] ?? '',
       name: json['name'] ?? 'Unknown',
 
-      // FIX: Robust Price Parsing
       price: double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,
 
-      stock: json['stock'] ?? 0,
-      thumbnailUrl: json['thumbnail_url'],
+      // Top level stock parsing
+      stock: int.tryParse(json['stock']?.toString() ?? '0') ?? 0,
+
+      thumbnailUrl: finalThumbnail,
       hasVariants: json['has_variants'] ?? false,
       isActive: json['is_active'] ?? true,
 
-      // FIX: Robust Rating Parsing (Prevents crash if API returns string "4.5")
       avgRating: double.tryParse(json['avg_rating']?.toString() ?? '0') ?? 0.0,
-
       reviewCount: json['review_count'] ?? 0,
+
       description: parsedDesc,
       images: parsedImages,
       variants: parsedVariants,

@@ -2,10 +2,10 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:go_router/go_router.dart'; // 1. Added GoRouter import
-import '../../controllers/cart_controller.dart';
-import '../../controllers/product_controller.dart';
-import '../../models/product.dart';
+import 'package:go_router/go_router.dart';
+import 'package:mobile/controllers/cart_controller.dart';
+import 'package:mobile/controllers/product_controller.dart';
+import 'package:mobile/models/product.dart';
 
 class ProductDetailPage extends ConsumerStatefulWidget {
   final String productId;
@@ -22,8 +22,6 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
 
   int _currentImageIndex = 0;
   String? _selectedVariantId;
-
-  // 2. Added Local State for Quantity
   int _quantity = 1;
 
   @override
@@ -43,7 +41,6 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
             child: BackButton(color: colorScheme.onSurface),
           ),
         ),
-        // 3. Added Cart Icon with Badge
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
@@ -52,7 +49,6 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
               child: Consumer(
                 builder: (context, ref, child) {
                   final cartState = ref.watch(cartControllerProvider);
-                  // Calculate count based on your CartState structure
                   final itemCount = cartState.items.length;
 
                   return Stack(
@@ -64,7 +60,6 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                           color: colorScheme.onSurface,
                         ),
                         onPressed: () {
-                          // Use GoRouter Push
                           context.push('/pushed-cart');
                         },
                       ),
@@ -105,20 +100,32 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text("Error: $err")),
         data: (product) {
+          // Determine Active Variant:
+          // 1. If user selected one, use it.
+          // 2. If not, find the FIRST AVAILABLE (Stock > 0).
+          // 3. If all OOS, default to the first one.
           ProductVariant? activeVariant;
-
           if (product.variants.isNotEmpty) {
             if (!product.hasVariants) {
               activeVariant = product.variants.first;
             } else {
               activeVariant = product.variants.firstWhere(
                 (v) => v.id == _selectedVariantId,
-                orElse: () => product.variants.first,
+                orElse: () => product.variants.firstWhere(
+                  // Try to find first in-stock item
+                  (v) => v.stockQuantity > 0 && v.isActive,
+                  // If EVERYTHING is OOS, just show the first item
+                  orElse: () => product.variants.first,
+                ),
               );
             }
           }
-
           final displayPrice = activeVariant?.price ?? product.price;
+
+          // Check if the current selection is available
+          final int currentStock = activeVariant?.stockQuantity ?? 0;
+          final bool isAvailable =
+              currentStock > 0 && (activeVariant?.isActive ?? true);
 
           return SingleChildScrollView(
             padding: EdgeInsets.only(
@@ -152,16 +159,31 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                       const SizedBox(height: 8),
 
                       // PRICE
-                      Text(
-                        NumberFormat.currency(
-                          locale: 'vi_VN',
-                          symbol: 'đ',
-                        ).format(displayPrice),
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.primary,
-                        ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Text(
+                            NumberFormat.currency(
+                              locale: 'vi_VN',
+                              symbol: 'đ',
+                            ).format(displayPrice),
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: colorScheme.primary,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          // Stock Status Text
+                          Text(
+                            isAvailable ? "Kho: $currentStock" : "Hết hàng",
+                            style: TextStyle(
+                              color: isAvailable ? Colors.grey : Colors.red,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                       ),
 
                       const SizedBox(height: 24),
@@ -180,7 +202,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                         _buildVariantSelector(
                           product,
                           colorScheme,
-                          activeVariant?.id,
+                          activeVariant?.id, // Pass the calculated ID here
                         ),
                         const SizedBox(height: 24),
                       ],
@@ -200,10 +222,30 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
     );
   }
 
-  // --- UPDATED BOTTOM BAR ---
   Widget _buildBottomBar(BuildContext context, Product? product) {
     if (product == null) return const SizedBox.shrink();
     final colorScheme = Theme.of(context).colorScheme;
+
+    // 1. Match Body Logic for default variant
+    ProductVariant? activeVariant;
+    if (product.variants.isNotEmpty) {
+      if (!product.hasVariants) {
+        activeVariant = product.variants.first;
+      } else {
+        activeVariant = product.variants.firstWhere(
+          (v) => v.id == _selectedVariantId,
+          orElse: () => product.variants.firstWhere(
+            (v) => v.stockQuantity > 0 && v.isActive,
+            orElse: () => product.variants.first,
+          ),
+        );
+      }
+    }
+
+    // 2. Logic: Is it buyable?
+    final int maxStock = activeVariant?.stockQuantity ?? 0;
+    final bool isActive = activeVariant?.isActive ?? true;
+    final bool isOutOfStock = maxStock <= 0 || !isActive;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -218,100 +260,106 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
         ],
       ),
       child: SafeArea(
-        // 4. Changed to Row to hold Quantity and Add Button
         child: Row(
           children: [
             // --- Quantity Selector ---
-            Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: colorScheme.outlineVariant),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: _quantity > 1
-                        ? () => setState(() => _quantity--)
-                        : null,
-                    icon: const Icon(Icons.remove),
-                    iconSize: 20,
-                    color: colorScheme.onSurface,
-                  ),
-                  Text(
-                    '$_quantity',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+            Opacity(
+              opacity: isOutOfStock ? 0.5 : 1.0,
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: colorScheme.outlineVariant),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    IconButton(
+                      onPressed: (!isOutOfStock && _quantity > 1)
+                          ? () => setState(() => _quantity--)
+                          : null,
+                      icon: const Icon(Icons.remove),
+                      iconSize: 20,
                       color: colorScheme.onSurface,
                     ),
-                  ),
-                  IconButton(
-                    onPressed: () => setState(() => _quantity++),
-                    icon: const Icon(Icons.add),
-                    iconSize: 20,
-                    color: colorScheme.onSurface,
-                  ),
-                ],
+                    Text(
+                      '$_quantity',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: (!isOutOfStock && _quantity < maxStock)
+                          ? () => setState(() => _quantity++)
+                          : null,
+                      icon: const Icon(Icons.add),
+                      iconSize: 20,
+                      color: (!isOutOfStock && _quantity < maxStock)
+                          ? colorScheme.onSurface
+                          : Colors.grey,
+                    ),
+                  ],
+                ),
               ),
             ),
 
             const SizedBox(width: 16),
 
-            // --- Add to Cart Button (Expanded) ---
+            // --- Add to Cart Button ---
             Expanded(
               child: FilledButton.icon(
-                onPressed: () async {
-                  ProductVariant? targetVariant;
+                onPressed: isOutOfStock
+                    ? null
+                    : () async {
+                        if (activeVariant == null) return;
+                        try {
+                          await ref
+                              .read(cartControllerProvider.notifier)
+                              .addToCart(
+                                product: product,
+                                variant: activeVariant,
+                                quantity: _quantity,
+                              );
 
-                  if (product.variants.isNotEmpty) {
-                    if (!product.hasVariants) {
-                      targetVariant = product.variants.first;
-                    } else {
-                      final selectedId =
-                          _selectedVariantId ?? product.variants.first.id;
-                      targetVariant = product.variants.firstWhere(
-                        (v) => v.id == selectedId,
-                      );
-                    }
-                  }
+                          if (context.mounted) {
+                            // Clear previous Snackbars first
+                            ScaffoldMessenger.of(context).clearSnackBars();
 
-                  if (targetVariant == null) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  "Đã thêm \"$_quantity x ${product.name}\" vào giỏ hàng!",
+                                ),
+                                backgroundColor: Colors.green,
+                                duration: const Duration(seconds: 2),
+                                behavior: SnackBarBehavior
+                                    .floating, // Optional: Makes it look nicer
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            // Clear previous Snackbars first
+                            ScaffoldMessenger.of(context).clearSnackBars();
 
-                  try {
-                    await ref
-                        .read(cartControllerProvider.notifier)
-                        .addToCart(
-                          product: product,
-                          variant: targetVariant,
-                          quantity: _quantity, // 5. Use selected quantity
-                        );
-
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            "Đã thêm \"$_quantity x ${product.name}\" vào giỏ hàng!",
-                          ),
-                          backgroundColor: Colors.green,
-                          duration: const Duration(seconds: 2),
-                        ),
-                      );
-                    }
-                  } catch (e) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(e.toString()),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                    }
-                  }
-                },
-                icon: const Icon(Icons.shopping_cart_outlined),
-                label: const Text("Thêm"),
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(e.toString()),
+                                backgroundColor: Colors.red,
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                icon: isOutOfStock
+                    ? const Icon(Icons.remove_shopping_cart, size: 20)
+                    : const Icon(Icons.shopping_cart_outlined),
+                label: Text(isOutOfStock ? "Hết hàng" : "Thêm vào giỏ"),
                 style: FilledButton.styleFrom(
                   minimumSize: const Size(double.infinity, 50),
+                  disabledBackgroundColor: Colors.grey.shade300,
+                  disabledForegroundColor: Colors.grey.shade600,
                 ),
               ),
             ),
@@ -340,6 +388,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                   final imageVariantId = product.images[index].variantId;
                   if (imageVariantId != null) {
                     _selectedVariantId = imageVariantId;
+                    _quantity = 1;
                   }
                 }
               });
@@ -396,10 +445,14 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
       children: product.variants.map((variant) {
         final isSelected = activeVariantId == variant.id;
 
+        // Check for Stock
+        final bool isAvailable = variant.stockQuantity > 0 && variant.isActive;
+
         return GestureDetector(
           onTap: () {
             setState(() {
               _selectedVariantId = variant.id;
+              _quantity = 1;
             });
             final imageIndex = product.images.indexWhere(
               (img) => img.variantId == variant.id,
@@ -408,28 +461,48 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
               _carouselController.animateToPage(imageIndex);
             }
           },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? colorScheme.primaryContainer
-                  : colorScheme.surface,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
+          child: Opacity(
+            opacity: isAvailable ? 1.0 : 0.5,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
                 color: isSelected
-                    ? colorScheme.primary
-                    : colorScheme.outlineVariant,
-                width: isSelected ? 2 : 1,
+                    ? colorScheme.primaryContainer
+                    : colorScheme.surface,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: isSelected
+                      ? colorScheme.primary
+                      : colorScheme.outlineVariant,
+                  width: isSelected ? 2 : 1,
+                ),
               ),
-            ),
-            child: Text(
-              variant.name,
-              style: TextStyle(
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected
-                    ? colorScheme.onPrimaryContainer
-                    : colorScheme.onSurface,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    variant.name,
+                    style: TextStyle(
+                      fontWeight: isSelected
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                      decoration: isAvailable
+                          ? TextDecoration.none
+                          : TextDecoration.lineThrough,
+                      color: isSelected
+                          ? colorScheme.onPrimaryContainer
+                          : colorScheme.onSurface,
+                    ),
+                  ),
+                  if (!isAvailable) ...[
+                    const SizedBox(width: 4),
+                    Text(
+                      "(Hết)",
+                      style: TextStyle(fontSize: 10, color: colorScheme.error),
+                    ),
+                  ],
+                ],
               ),
             ),
           ),

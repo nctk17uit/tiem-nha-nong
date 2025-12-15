@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/cart.dart';
-import '../models/product.dart'; // Need Product/Variant models for adding
-import '../repositories/cart_repository.dart';
-import '../services/cart_storage.dart';
-import 'auth_controller.dart'; // To check login state
+import 'package:mobile/models/cart.dart';
+import 'package:mobile/models/product.dart';
+import 'package:mobile/repositories/cart_repository.dart';
+import 'package:mobile/services/cart_storage.dart';
+import 'auth_controller.dart';
 import 'package:flutter/foundation.dart';
 
 class CartState {
@@ -36,8 +36,6 @@ class CartController extends Notifier<CartState> {
     try {
       if (user != null) {
         // Logged In: Load from API
-        // items = await ref.read(cartRepositoryProvider).getCart();
-
         // 1. LOGGED IN: Try to fetch from API with a 5-second timeout
         // If server is down, this throws an error after 5 seconds instead of waiting forever.
         items = await ref
@@ -55,47 +53,68 @@ class CartController extends Notifier<CartState> {
   }
 
   // --- ADD ITEM ---
+  // --- ADD ITEM ---
   Future<void> addToCart({
     required Product product,
     required ProductVariant variant,
     int quantity = 1,
   }) async {
     final user = ref.read(authControllerProvider).value;
+
+    // --- 1. PRE-VALIDATION (Check limit before doing anything) ---
+    // Find if this item is already in the cart (Works for both Guest & User state)
+    final existingItemIndex = state.items.indexWhere(
+      (item) => item.variantId == variant.id,
+    );
+
+    int currentQtyInCart = 0;
+    if (existingItemIndex != -1) {
+      currentQtyInCart = state.items[existingItemIndex].quantity;
+    }
+
+    // Check if adding this quantity exceeds stock
+    if (currentQtyInCart + quantity > variant.stockQuantity) {
+      if (currentQtyInCart >= variant.stockQuantity) {
+        // Case A: Cart already has 2, Stock is 2. User tries to add more.
+        throw "Bạn đã đạt giới hạn số lượng mua cho sản phẩm này!";
+      } else {
+        // Case B: Cart has 1, Stock is 2. User tries to add 2 more.
+        final availableToAdd = variant.stockQuantity - currentQtyInCart;
+        throw "Chỉ có thể thêm tối đa $availableToAdd sản phẩm nữa vào giỏ!";
+      }
+    }
+
+    // If validation passes, proceed with loading state
     state = CartState(items: state.items, isLoading: true);
 
     try {
       if (user != null) {
-        // 1. Logged In: Call API
+        // --- LOGGED IN PATH ---
         await ref.read(cartRepositoryProvider).addToCart(variant.id, quantity);
-        // Refresh cart from server to get correct IDs and totals
+
         final newItems = await ref.read(cartRepositoryProvider).getCart();
         state = CartState(items: newItems, isLoading: false);
       } else {
-        // 2. Guest: Local Logic
-        // Check local duplicate
+        // --- GUEST PATH ---
         final currentItems = [...state.items];
-        final index = currentItems.indexWhere((i) => i.variantId == variant.id);
 
-        if (index != -1) {
+        if (existingItemIndex != -1) {
           // Update existing
-          final existing = currentItems[index];
+          final existing = currentItems[existingItemIndex];
           final newQty = existing.quantity + quantity;
-          // Validate Stock (Optimistic)
-          if (newQty > variant.stock) throw "Not enough stock";
 
-          currentItems[index] = CartItem(
-            variantId: variant.id,
-            productId: product.id,
-            productName: product.name,
-            variantName: variant.name,
-            thumbnailUrl: product.thumbnailUrl, // Or specific variant image
-            price: variant.price,
+          // We already validated stock above, but double-check ensures safety
+          if (newQty > variant.stockQuantity)
+            throw "Số lượng sản phẩm trong kho không đủ";
+
+          currentItems[existingItemIndex] = existing.copyWith(
             quantity: newQty,
-            stockQuantity: variant.stock,
+            stockQuantity: variant.stockQuantity,
           );
         } else {
           // Add new
-          if (quantity > variant.stock) throw "Not enough stock";
+          if (quantity > variant.stockQuantity)
+            throw "Số lượng sản phẩm trong kho không đủ";
 
           currentItems.add(
             CartItem(
@@ -106,18 +125,25 @@ class CartController extends Notifier<CartState> {
               thumbnailUrl: product.thumbnailUrl,
               price: variant.price,
               quantity: quantity,
-              stockQuantity: variant.stock,
+              stockQuantity: variant.stockQuantity,
             ),
           );
         }
 
-        // Save to Storage
         await ref.read(cartStorageProvider).saveCart(currentItems);
         state = CartState(items: currentItems, isLoading: false);
       }
     } catch (e) {
       state = CartState(items: state.items, isLoading: false);
-      rethrow; // Let UI handle error toast
+
+      // --- HANDLE SERVER 409 (Race Condition) ---
+      // This only triggers if the UI thought there was stock, but the
+      // Server says "No, someone else just bought it".
+      if (e.toString().contains("409")) {
+        throw "Rất tiếc, sản phẩm này vừa hết hàng!";
+      }
+
+      rethrow;
     }
   }
 
@@ -128,9 +154,12 @@ class CartController extends Notifier<CartState> {
 
       // 1. Get Local Items
       final localItems = await ref.read(cartStorageProvider).loadCart();
+
       if (localItems.isEmpty) {
-        // Nothing to merge, just fetch server cart
-        await _loadInitialCart();
+        // Don't call _loadInitialCart(). The AuthProvider isn't updated yet!
+        // Call the repository directly to fetch the server cart.
+        final serverItems = await ref.read(cartRepositoryProvider).getCart();
+        state = CartState(items: serverItems, isLoading: false);
         return [];
       }
 
@@ -142,8 +171,9 @@ class CartController extends Notifier<CartState> {
       // 3. Clear Local Storage
       await ref.read(cartStorageProvider).clearCart();
 
-      // 4. Refresh State from Server
-      await _loadInitialCart();
+      // Again, call repository directly to get the final merged list.
+      final finalItems = await ref.read(cartRepositoryProvider).getCart();
+      state = CartState(items: finalItems, isLoading: false);
 
       return notifications;
     } catch (e) {
@@ -173,7 +203,7 @@ class CartController extends Notifier<CartState> {
 
     try {
       if (user != null) {
-        if (item.id == null) throw "ID missing";
+        if (item.id == null) throw "Không tìm thấy ID sản phẩm";
         await ref.read(cartRepositoryProvider).removeItem(item.id!);
       } else {
         await ref.read(cartStorageProvider).saveCart(optimisticItems);
@@ -212,15 +242,10 @@ class CartController extends Notifier<CartState> {
     try {
       if (user != null) {
         // 4a. Logged In: Sync with API
-        if (item.id == null) throw "ID missing";
+        if (item.id == null) throw "Không tìm thấy ID sản phẩm";
         await ref
             .read(cartRepositoryProvider)
             .updateQuantity(item.id!, newQuantity);
-
-        // Optional: You can fetch the cart again "silently" to ensure price totals are correct from server
-        // without triggering a loading spinner.
-        // final serverItems = await ref.read(cartRepositoryProvider).getCart();
-        // state = CartState(items: serverItems, isLoading: false);
       } else {
         // 4b. Guest: Save to Storage
         await ref.read(cartStorageProvider).saveCart(optimisticItems);
@@ -228,7 +253,6 @@ class CartController extends Notifier<CartState> {
     } catch (e) {
       // 5. REVERT on failure
       state = CartState(items: previousItems, isLoading: false);
-      // Optional: Show Toast "Update failed"
     }
   }
 }
