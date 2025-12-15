@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mobile/controllers/auth_controller.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mobile/controllers/auth_controller.dart';
 
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
@@ -12,156 +12,378 @@ class ProfilePage extends ConsumerWidget {
     final user = userState.value;
     final isGuest = user == null;
 
+    if (userState.isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (isGuest) {
+      return _buildLoginPrompt(context);
+    }
+
+    return _buildAuthenticatedProfile(context, ref, user);
+  }
+
+  // --- 1. GUEST VIEW ---
+  Widget _buildLoginPrompt(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Scaffold(
-      appBar: AppBar(title: const Text("Profile")),
-      body: Center(
-        child: userState.isLoading
-            ? const CircularProgressIndicator()
-            : SingleChildScrollView(
-                padding: const EdgeInsets.all(24.0),
+      body: SafeArea(
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: Opacity(
+                  opacity: 0.06,
+                  child: Icon(
+                    Icons.person_outline,
+                    size: MediaQuery.of(context).size.width * 0.9,
+                    color: colorScheme.primary,
+                  ),
+                ),
+              ),
+            ),
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    // --- Avatar Section ---
-                    CircleAvatar(
-                      radius: 50,
-                      backgroundColor: isGuest
-                          ? Colors.grey.shade200
-                          : Colors.indigo.shade50,
-                      child: Icon(
-                        isGuest
-                            ? Icons.account_circle_outlined
-                            : Icons.verified_user,
-                        size: 60,
-                        color: isGuest ? Colors.grey : Colors.indigo,
+                    Icon(
+                      Icons.lock_outline,
+                      size: 72,
+                      color: Colors.grey[700],
+                    ),
+                    const SizedBox(height: 18),
+                    Text(
+                      'Đăng nhập để tiếp tục',
+                      textAlign: TextAlign.center,
+                      style: textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Đăng nhập để xem đơn hàng, địa chỉ và các quyền lợi cá nhân của bạn.',
+                      textAlign: TextAlign.center,
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        height: 1.4,
                       ),
                     ),
                     const SizedBox(height: 24),
-
-                    // --- Conditional UI ---
-                    if (isGuest) ...[
-                      const Text(
-                        "You are currently a Guest.",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        "Sign in to view your orders, points, and personal details.",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                      const SizedBox(height: 32),
-                      FilledButton.icon(
-                        icon: const Icon(Icons.login),
-                        label: const Text("Sign In"),
-                        style: FilledButton.styleFrom(
-                          minimumSize: const Size(double.infinity, 48),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange[700],
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
                         onPressed: () => context.push('/login'),
-                      ),
-                    ] else ...[
-                      // --- Logged In View ---
-                      Text(
-                        user.name,
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        user.email,
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // User Details Card
-                      Card(
-                        elevation: 0,
-                        color: Colors.grey.shade50,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(color: Colors.grey.shade200),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            children: [
-                              _buildInfoRow(
-                                Icons.phone,
-                                "Phone",
-                                user.phoneNumber,
-                              ),
-                              const Divider(),
-                              _buildInfoRow(
-                                Icons.badge,
-                                "Role",
-                                user.role.toUpperCase(),
-                              ),
-                              const Divider(),
-                              _buildInfoRow(
-                                Icons.lock_outline,
-                                "Status",
-                                user.isLocked ? "Locked" : "Active",
-                                valueColor: user.isLocked
-                                    ? Colors.red
-                                    : Colors.green,
-                              ),
-                            ],
+                        child: const Text(
+                          'Đăng nhập',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
-
-                      const SizedBox(height: 32),
-
-                      // Logout Button
-                      OutlinedButton.icon(
-                        icon: const Icon(Icons.logout),
-                        label: const Text("Logout"),
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size(double.infinity, 48),
-                          foregroundColor: Colors.red,
-                          side: const BorderSide(color: Colors.red),
-                        ),
-                        onPressed: () {
-                          ref.read(authControllerProvider.notifier).logout();
-                        },
+                    ),
+                    const SizedBox(height: 12),
+                    TextButton(
+                      onPressed: () => context.go('/home'),
+                      child: Text(
+                        'Về trang chủ',
+                        style: TextStyle(color: colorScheme.onSurfaceVariant),
                       ),
-                    ],
+                    ),
                   ],
                 ),
               ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  // Helper widget for the info rows
-  Widget _buildInfoRow(
-    IconData icon,
-    String label,
-    String value, {
-    Color? valueColor,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: Colors.indigo),
-          const SizedBox(width: 12),
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
-          const Spacer(),
-          Text(
-            value,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: valueColor ?? Colors.black87,
+  // --- 2. AUTHENTICATED VIEW ---
+  Widget _buildAuthenticatedProfile(
+    BuildContext context,
+    WidgetRef ref,
+    dynamic user,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Scaffold(
+      body: SafeArea(
+        // CHANGE: Use Column + Expanded to separate ScrollView from Bottom Button
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    // --- HEADER ---
+                    Container(
+                      color: colorScheme.primary,
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 56,
+                                height: 56,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white, width: 2),
+                                ),
+                                child: ClipOval(
+                                  child: _buildOfflineAvatar(user.name),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      user.name,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      user.email,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.white70,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Chức năng chỉnh sửa đang phát triển',
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange[700],
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Text(
+                                    'Sửa hồ sơ',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // --- PERSONAL INFO ---
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Thông tin cá nhân',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey[300]!),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Email: ${user.email}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // --- SHOPPING INFO GRID ---
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Thông tin mua sắm',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _buildShoppingInfoCard(
+                                'Đơn hàng',
+                                Icons.shopping_bag_outlined,
+                              ),
+                              _buildShoppingInfoCard(
+                                'Địa chỉ',
+                                Icons.location_on_outlined,
+                              ),
+                              _buildShoppingInfoCard(
+                                'Yêu thích',
+                                Icons.favorite_outline,
+                              ),
+                              _buildShoppingInfoCard(
+                                'Ưu đãi',
+                                Icons.star_outline,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Add bottom padding inside scroll view so content isn't cut off
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
             ),
+
+            // --- STICKY LOGOUT BUTTON ---
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  ref.read(authControllerProvider.notifier).logout();
+                },
+                icon: const Icon(Icons.logout, color: Colors.red),
+                label: const Text(
+                  "Đăng xuất",
+                  style: TextStyle(color: Colors.red),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Colors.red),
+                  minimumSize: const Size(double.infinity, 48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --- HELPERS (Unchanged) ---
+
+  Widget _buildShoppingInfoCard(String label, IconData icon) {
+    return Expanded(
+      child: Column(
+        children: [
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: Colors.green[700], size: 24),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 11, color: Colors.grey[700]),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildOfflineAvatar(String name) {
+    return Container(
+      color: _getAvatarColor(name),
+      alignment: Alignment.center,
+      child: Text(
+        _getInitials(name),
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 20,
+        ),
+      ),
+    );
+  }
+
+  String _getInitials(String name) {
+    if (name.isEmpty) return "U";
+    List<String> nameParts = name.trim().split(' ');
+    if (nameParts.length > 1) {
+      return "${nameParts.first[0]}${nameParts.last[0]}".toUpperCase();
+    }
+    return name[0].toUpperCase();
+  }
+
+  Color _getAvatarColor(String name) {
+    final List<Color> colors = [
+      Colors.red,
+      Colors.pink,
+      Colors.purple,
+      Colors.deepPurple,
+      Colors.indigo,
+      Colors.blue,
+      Colors.teal,
+      Colors.green,
+      Colors.orange,
+      Colors.brown,
+    ];
+    return colors[name.hashCode.abs() % colors.length];
   }
 }
