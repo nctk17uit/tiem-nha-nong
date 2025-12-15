@@ -156,6 +156,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           return ProductDetailPage(productId: id);
         },
       ),
+      GoRoute(
+        path: '/pushed-cart',
+        builder: (context, state) => const CartPage(),
+      ),
     ],
   );
 });

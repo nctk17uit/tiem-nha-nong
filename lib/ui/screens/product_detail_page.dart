@@ -2,7 +2,8 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../../controllers/cart_controller.dart'; // Import Cart Controller
+import 'package:go_router/go_router.dart'; // 1. Added GoRouter import
+import '../../controllers/cart_controller.dart';
 import '../../controllers/product_controller.dart';
 import '../../models/product.dart';
 
@@ -20,7 +21,10 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
       CarouselSliderController();
 
   int _currentImageIndex = 0;
-  String? _selectedVariantId; // Only used if hasVariants == true
+  String? _selectedVariantId;
+
+  // 2. Added Local State for Quantity
+  int _quantity = 1;
 
   @override
   Widget build(BuildContext context) {
@@ -39,20 +43,74 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
             child: BackButton(color: colorScheme.onSurface),
           ),
         ),
+        // 3. Added Cart Icon with Badge
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: CircleAvatar(
+              backgroundColor: colorScheme.surface.withOpacity(0.7),
+              child: Consumer(
+                builder: (context, ref, child) {
+                  final cartState = ref.watch(cartControllerProvider);
+                  // Calculate count based on your CartState structure
+                  final itemCount = cartState.items.length;
+
+                  return Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      IconButton(
+                        icon: Icon(
+                          Icons.shopping_cart_outlined,
+                          color: colorScheme.onSurface,
+                        ),
+                        onPressed: () {
+                          // Use GoRouter Push
+                          context.push('/pushed-cart');
+                        },
+                      ),
+                      if (itemCount > 0)
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 16,
+                              minHeight: 16,
+                            ),
+                            child: Text(
+                              '$itemCount',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
       ),
       body: asyncProduct.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text("Error: $err")),
         data: (product) {
-          // --- LOGIC: DETERMINE ACTIVE VARIANT ---
           ProductVariant? activeVariant;
 
           if (product.variants.isNotEmpty) {
             if (!product.hasVariants) {
-              // CASE 1: Single Product -> Always use the first (default) variant
               activeVariant = product.variants.first;
             } else {
-              // CASE 2: Multi Variant -> Use selection OR default to first
               activeVariant = product.variants.firstWhere(
                 (v) => v.id == _selectedVariantId,
                 orElse: () => product.variants.first,
@@ -142,8 +200,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
     );
   }
 
-  // --- WIDGET BUILDERS ---
-
+  // --- UPDATED BOTTOM BAR ---
   Widget _buildBottomBar(BuildContext context, Product? product) {
     if (product == null) return const SizedBox.shrink();
     final colorScheme = Theme.of(context).colorScheme;
@@ -161,60 +218,104 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
         ],
       ),
       child: SafeArea(
-        child: FilledButton.icon(
-          onPressed: () async {
-            // 1. Resolve Variant
-            ProductVariant? targetVariant;
-
-            if (product.variants.isNotEmpty) {
-              if (!product.hasVariants) {
-                targetVariant = product.variants.first;
-              } else {
-                final selectedId =
-                    _selectedVariantId ?? product.variants.first.id;
-                targetVariant = product.variants.firstWhere(
-                  (v) => v.id == selectedId,
-                );
-              }
-            }
-
-            if (targetVariant == null) return;
-
-            // 2. Add to Cart (Call Controller)
-            try {
-              await ref
-                  .read(cartControllerProvider.notifier)
-                  .addToCart(
-                    product: product,
-                    variant: targetVariant,
-                    quantity: 1,
-                  );
-
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text("Added ${product.name} to cart"),
-                    backgroundColor: Colors.green,
-                    duration: const Duration(seconds: 2),
+        // 4. Changed to Row to hold Quantity and Add Button
+        child: Row(
+          children: [
+            // --- Quantity Selector ---
+            Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: colorScheme.outlineVariant),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: _quantity > 1
+                        ? () => setState(() => _quantity--)
+                        : null,
+                    icon: const Icon(Icons.remove),
+                    iconSize: 20,
+                    color: colorScheme.onSurface,
                   ),
-                );
-              }
-            } catch (e) {
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(e.toString()), // e.g. "Not enough stock"
-                    backgroundColor: Colors.red,
+                  Text(
+                    '$_quantity',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface,
+                    ),
                   ),
-                );
-              }
-            }
-          },
-          icon: const Icon(Icons.shopping_cart_outlined),
-          label: const Text("Thêm vào giỏ hàng"),
-          style: FilledButton.styleFrom(
-            minimumSize: const Size(double.infinity, 50),
-          ),
+                  IconButton(
+                    onPressed: () => setState(() => _quantity++),
+                    icon: const Icon(Icons.add),
+                    iconSize: 20,
+                    color: colorScheme.onSurface,
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(width: 16),
+
+            // --- Add to Cart Button (Expanded) ---
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: () async {
+                  ProductVariant? targetVariant;
+
+                  if (product.variants.isNotEmpty) {
+                    if (!product.hasVariants) {
+                      targetVariant = product.variants.first;
+                    } else {
+                      final selectedId =
+                          _selectedVariantId ?? product.variants.first.id;
+                      targetVariant = product.variants.firstWhere(
+                        (v) => v.id == selectedId,
+                      );
+                    }
+                  }
+
+                  if (targetVariant == null) return;
+
+                  try {
+                    await ref
+                        .read(cartControllerProvider.notifier)
+                        .addToCart(
+                          product: product,
+                          variant: targetVariant,
+                          quantity: _quantity, // 5. Use selected quantity
+                        );
+
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            "Đã thêm \"$_quantity x ${product.name}\" vào giỏ hàng!",
+                          ),
+                          backgroundColor: Colors.green,
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(e.toString()),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                },
+                icon: const Icon(Icons.shopping_cart_outlined),
+                label: const Text("Thêm"),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 50),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
