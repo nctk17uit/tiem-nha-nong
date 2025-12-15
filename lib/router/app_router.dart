@@ -9,6 +9,8 @@ import 'package:mobile/ui/screens/forgot_password_page.dart';
 import 'package:mobile/ui/screens/reset_password_page.dart';
 import 'package:mobile/ui/screens/update_info_page.dart';
 import 'package:mobile/ui/screens/change_password_page.dart';
+import 'package:mobile/ui/screens/address_list_page.dart';
+import 'package:mobile/ui/screens/add_edit_address_page.dart';
 import 'package:mobile/ui/screens/splash_page.dart';
 import 'package:mobile/ui/screens/home_page.dart';
 import 'package:mobile/ui/screens/profile_page.dart';
@@ -18,6 +20,7 @@ import 'package:mobile/ui/screens/product_list_page.dart';
 import 'package:mobile/ui/screens/product_detail_page.dart';
 import 'package:mobile/ui/widgets/app_navigation_bar.dart';
 import 'package:mobile/models/category.dart';
+import 'package:mobile/models/shipping_address.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -66,6 +69,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/profile/change-password',
         builder: (context, state) => const ChangePasswordPage(),
+      ),
+      GoRoute(
+        path: '/addresses',
+        builder: (context, state) => const AddressListPage(),
+      ),
+      GoRoute(
+        path: '/addresses/form',
+        builder: (context, state) {
+          // Retrieve the address object if passed (for Edit mode)
+          final address = state.extra as ShippingAddress?;
+          return AddEditAddressPage(address: address);
+        },
       ),
       // --- MAIN APP SHELL (Bottom Nav) ---
       StatefulShellRoute.indexedStack(

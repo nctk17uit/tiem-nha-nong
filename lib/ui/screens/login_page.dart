@@ -11,8 +11,9 @@ class LoginPage extends ConsumerStatefulWidget {
 }
 
 class _LoginPageState extends ConsumerState<LoginPage> {
-  final _emailCtrl = TextEditingController(text: 'test@test.com');
-  final _passCtrl = TextEditingController(text: 'password');
+  // 1. CHANGE: Remove initial text values
+  final _emailCtrl = TextEditingController();
+  final _passCtrl = TextEditingController();
   bool _obscure = true;
 
   @override
@@ -22,7 +23,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     super.dispose();
   }
 
-  // --- FIX: Handle Login & Navigation Locally ---
   void _onLogin() async {
     // 1. Trigger Login
     await ref
@@ -30,7 +30,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         .login(_emailCtrl.text, _passCtrl.text);
 
     // 2. Check Result
-    // We check the *current* state of the provider after the await finishes
     final state = ref.read(authControllerProvider);
 
     if (state.hasError && !state.isLoading) {
@@ -45,7 +44,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     } else if (state.value != null) {
       // 3. Success: Navigate
       if (mounted) {
-        // Use .go() to clear the Login page from history so user can't "back" to it
         context.go('/profile');
       }
     }
@@ -53,8 +51,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    // REMOVED: ref.listen(...) - This was the cause of the bug!
-
     final isLoading = ref.watch(authControllerProvider).isLoading;
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -122,6 +118,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 keyboardType: TextInputType.emailAddress,
                 decoration: _buildInputDecoration(
                   label: 'Email',
+                  hintText: 'user@example.com', // Added Hint
                   colorScheme: colorScheme,
                 ),
               ),
@@ -133,6 +130,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 obscureText: _obscure,
                 decoration: _buildInputDecoration(
                   label: 'Mật khẩu',
+                  hintText: '••••••••', // Added Hint
                   colorScheme: colorScheme,
                   suffixIcon: IconButton(
                     icon: Icon(
@@ -177,8 +175,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(24),
                           ),
+                          elevation: 2,
                         ),
-                        // USE THE NEW METHOD
                         onPressed: _onLogin,
                         child: Text(
                           'Đăng nhập',
@@ -222,15 +220,21 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     );
   }
 
+  // 2. CHANGE: Added hintText parameter
   InputDecoration _buildInputDecoration({
     required String label,
     required ColorScheme colorScheme,
+    String? hintText,
     Widget? suffixIcon,
   }) {
     return InputDecoration(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       labelText: label,
+      hintText: hintText, // Applied here
       labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+      hintStyle: TextStyle(
+        color: colorScheme.onSurfaceVariant.withOpacity(0.5),
+      ),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: colorScheme.outline),

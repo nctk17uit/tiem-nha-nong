@@ -311,6 +311,9 @@ class ProfilePage extends ConsumerWidget {
                               _buildShoppingInfoCard(
                                 'Địa chỉ',
                                 Icons.location_on_outlined,
+                                onTap: () {
+                                  context.push('/addresses');
+                                },
                               ),
                               _buildShoppingInfoCard(
                                 'Yêu thích',
@@ -359,26 +362,35 @@ class ProfilePage extends ConsumerWidget {
   }
 
   // --- HELPERS ---
-  Widget _buildShoppingInfoCard(String label, IconData icon) {
+  // UPDATE: Added onTap parameter
+  Widget _buildShoppingInfoCard(
+    String label,
+    IconData icon, {
+    VoidCallback? onTap,
+  }) {
     return Expanded(
-      child: Column(
-        children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(8),
+      child: GestureDetector(
+        onTap: onTap, // Hook up the callback
+        behavior: HitTestBehavior.opaque, // Ensure tap target is good
+        child: Column(
+          children: [
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: Colors.green[700], size: 24),
             ),
-            child: Icon(icon, color: Colors.green[700], size: 24),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 11, color: Colors.grey),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 11, color: Colors.grey),
+            ),
+          ],
+        ),
       ),
     );
   }
