@@ -3,59 +3,57 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile/controllers/auth_controller.dart';
 
-class LoginPage extends ConsumerStatefulWidget {
-  const LoginPage({super.key});
+class RegisterPage extends ConsumerStatefulWidget {
+  const RegisterPage({super.key});
 
   @override
-  ConsumerState<LoginPage> createState() => _LoginPageState();
+  ConsumerState<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _LoginPageState extends ConsumerState<LoginPage> {
-  final _emailCtrl = TextEditingController(text: 'test@test.com');
-  final _passCtrl = TextEditingController(text: 'password');
+class _RegisterPageState extends ConsumerState<RegisterPage> {
+  // 1. Controllers for Name, Email, Password
+  final _nameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _passCtrl = TextEditingController();
   bool _obscure = true;
 
   @override
   void dispose() {
+    _nameCtrl.dispose();
     _emailCtrl.dispose();
     _passCtrl.dispose();
     super.dispose();
   }
 
-  // --- FIX: Handle Login & Navigation Locally ---
-  void _onLogin() async {
-    // 1. Trigger Login
-    await ref
+  void _onRegister() async {
+    // 2. Validation: Require Name, Email, and Password
+    final name = _nameCtrl.text.trim();
+    final email = _emailCtrl.text.trim();
+    final pass = _passCtrl.text;
+
+    if (name.isEmpty || email.isEmpty || pass.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng điền đầy đủ thông tin')),
+      );
+      return;
+    }
+
+    // 3. Call Controller with (Name, Email, Password)
+    final success = await ref
         .read(authControllerProvider.notifier)
-        .login(_emailCtrl.text, _passCtrl.text);
+        .register(name, email, pass);
 
-    // 2. Check Result
-    // We check the *current* state of the provider after the await finishes
-    final state = ref.read(authControllerProvider);
-
-    if (state.hasError && !state.isLoading) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("${state.error}"),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
-    } else if (state.value != null) {
-      // 3. Success: Navigate
-      if (mounted) {
-        // Use .go() to clear the Login page from history so user can't "back" to it
-        context.go('/profile');
-      }
+    // 4. Navigate on Success using GoRouter
+    if (success && mounted) {
+      // Pass the email to the Verify page so the user doesn't have to re-type it
+      context.push('/verify-code', extra: email);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // REMOVED: ref.listen(...) - This was the cause of the bug!
-
     final isLoading = ref.watch(authControllerProvider).isLoading;
+
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
@@ -68,13 +66,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.close, color: colorScheme.onSurface),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/');
-            }
-          },
+          onPressed: () => Navigator.of(context).pop(),
         ),
       ),
       body: SafeArea(
@@ -84,6 +76,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const SizedBox(height: 12),
+
               // --- LOGO ---
               Container(
                 width: 72,
@@ -114,7 +107,18 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(height: 22),
+              const SizedBox(height: 18),
+
+              // --- NAME INPUT ---
+              TextField(
+                controller: _nameCtrl,
+                textCapitalization: TextCapitalization.words,
+                decoration: _buildInputDecoration(
+                  label: 'Họ và tên', // Updated Label
+                  colorScheme: colorScheme,
+                ),
+              ),
+              const SizedBox(height: 12),
 
               // --- EMAIL INPUT ---
               TextField(
@@ -144,27 +148,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 ),
               ),
 
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton(
-                  onPressed: () {
-                    context.push('/forgot-password');
-                  },
-                  style: TextButton.styleFrom(padding: EdgeInsets.zero),
-                  child: Text(
-                    'Quên mật khẩu?',
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: primaryColor,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-
               const SizedBox(height: 24),
 
-              // --- LOGIN BUTTON ---
+              // --- REGISTER BUTTON ---
               SizedBox(
                 width: double.infinity,
                 child: isLoading
@@ -177,11 +163,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(24),
                           ),
+                          elevation: 2,
                         ),
-                        // USE THE NEW METHOD
-                        onPressed: _onLogin,
+                        onPressed: _onRegister,
                         child: Text(
-                          'Đăng nhập',
+                          'Tạo tài khoản',
                           style: textTheme.titleMedium?.copyWith(
                             color: colorScheme.onPrimary,
                             fontWeight: FontWeight.w700,
@@ -190,31 +176,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       ),
               ),
 
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Chưa có tài khoản? ',
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      context.push('/register');
-                    },
-                    child: Text(
-                      'Đăng ký ngay',
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: primaryColor,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 18),
             ],
           ),
         ),
@@ -222,6 +184,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     );
   }
 
+  // Consistent Input Style
   InputDecoration _buildInputDecoration({
     required String label,
     required ColorScheme colorScheme,
@@ -231,6 +194,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       labelText: label,
       labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: colorScheme.outline),

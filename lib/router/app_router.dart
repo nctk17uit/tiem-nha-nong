@@ -3,10 +3,13 @@ import 'package:go_router/go_router.dart';
 import 'package:mobile/controllers/auth_controller.dart';
 import 'package:mobile/ui/screens/cart_page.dart';
 import 'package:mobile/ui/screens/login_page.dart';
+import 'package:mobile/ui/screens/register_page.dart';
+import 'package:mobile/ui/screens/verification_page.dart';
+import 'package:mobile/ui/screens/forgot_password_page.dart';
+import 'package:mobile/ui/screens/reset_password_page.dart';
 import 'package:mobile/ui/screens/splash_page.dart';
 import 'package:mobile/ui/screens/home_page.dart';
 import 'package:mobile/ui/screens/profile_page.dart';
-import 'package:mobile/ui/screens/simple_page.dart';
 import 'package:mobile/ui/screens/category_page.dart';
 import 'package:mobile/ui/screens/sub_category_page.dart';
 import 'package:mobile/ui/screens/product_list_page.dart';
@@ -19,7 +22,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/splash',
     debugLogDiagnostics: true,
     redirect: (context, state) {
-      // Minimal Redirect: Only protect the splash screen looping
+      // 1. Protect Splash Loop
       if (state.matchedLocation == '/splash') {
         final user = ref.read(authControllerProvider).value;
         if (user != null) {
@@ -31,10 +34,35 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(path: '/splash', builder: (context, state) => const SplashPage()),
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
+      GoRoute(
+        path: '/register',
+        builder: (context, state) => const RegisterPage(),
+      ),
+      GoRoute(
+        path: '/verify-code',
+        builder: (context, state) {
+          final email = state.extra as String?;
+          return VerificationPage(email: email ?? '');
+        },
+      ),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (context, state) => const ForgotPasswordPage(),
+      ),
+      GoRoute(
+        path: '/reset-password',
+        builder: (context, state) {
+          // Retrieve email passed from ForgotPasswordPage
+          final email = state.extra as String?;
+          return ResetPasswordPage(email: email ?? '');
+        },
+      ),
+      // --- MAIN APP SHELL (Bottom Nav) ---
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
             ScaffoldWithNavBar(navigationShell: navigationShell),
         branches: [
+          // Tab 1: Home
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -50,23 +78,16 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: '/category',
                 builder: (context, state) => const CategoryPage(),
                 routes: [
-                  // The Sub-Route for drill-down
-                  // Access via: context.push('/category/sub', extra: categoryObj);
                   GoRoute(
-                    path: 'sub', // Resulting path: /category/sub
+                    path: 'sub',
                     builder: (context, state) {
-                      // Pass the object via 'extra' to avoid re-fetching
                       final category = state.extra as Category;
                       return SubCategoryPage(parentCategory: category);
                     },
                   ),
-
-                  // Path becomes: /category/products
                   GoRoute(
                     path: 'products',
                     builder: (context, state) {
-                      // We expect a Category object to be passed via 'extra'
-                      // It can be null (e.g., if we just want to show all products)
                       final category = state.extra as Category?;
                       return ProductListPage(category: category);
                     },
@@ -75,6 +96,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
+          // Tab 3: Cart
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -83,6 +105,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
+          // Tab 4: Profile
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -93,8 +116,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
         ],
       ),
+      // Global Detail Route (pushes over tabs)
       GoRoute(
-        // Path uses a parameter :id
         path: '/product/:id',
         builder: (context, state) {
           final id = state.pathParameters['id']!;
