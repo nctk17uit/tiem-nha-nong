@@ -303,14 +303,36 @@ class _FilterDrawer extends ConsumerStatefulWidget {
 }
 
 class _FilterDrawerState extends ConsumerState<_FilterDrawer> {
-  final _minPriceCtrl = TextEditingController();
-  final _maxPriceCtrl = TextEditingController();
+  late TextEditingController _minPriceCtrl;
+  late TextEditingController _maxPriceCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize controllers with current state values from the provider
+    final currentFilter = ref.read(productFilterProvider);
+    _minPriceCtrl = TextEditingController(
+      text: currentFilter.priceMin?.toStringAsFixed(0) ?? '',
+    );
+    _maxPriceCtrl = TextEditingController(
+      text: currentFilter.priceMax?.toStringAsFixed(0) ?? '',
+    );
+  }
 
   @override
   void dispose() {
     _minPriceCtrl.dispose();
     _maxPriceCtrl.dispose();
     super.dispose();
+  }
+
+  void _resetFilters() {
+    // Reset the provider state
+    ref.read(productFilterProvider.notifier).reset();
+
+    // Clear the local text controllers immediately
+    _minPriceCtrl.clear();
+    _maxPriceCtrl.clear();
   }
 
   @override
@@ -321,17 +343,28 @@ class _FilterDrawerState extends ConsumerState<_FilterDrawer> {
 
     return Drawer(
       width: 300,
-      backgroundColor: colorScheme.surface, // Standard drawer background
+      backgroundColor: colorScheme.surface,
       child: SafeArea(
         child: Column(
           children: [
             Padding(
               padding: const EdgeInsets.all(16.0),
-              child: Text(
-                "Filter Products",
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(color: colorScheme.onSurface),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Bộ lọc",
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: colorScheme.onSurface,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  // Added a clear filter button at the top
+                  TextButton(
+                    onPressed: _resetFilters,
+                    child: const Text("Xóa tất cả"),
+                  ),
+                ],
               ),
             ),
             const Divider(),
@@ -341,7 +374,7 @@ class _FilterDrawerState extends ConsumerState<_FilterDrawer> {
                 children: [
                   // 1. Sort By
                   Text(
-                    "Sort By",
+                    "Sắp xếp theo",
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: colorScheme.onSurface,
@@ -350,22 +383,24 @@ class _FilterDrawerState extends ConsumerState<_FilterDrawer> {
                   DropdownButton<String>(
                     value: filter.sortBy,
                     isExpanded: true,
-                    dropdownColor: colorScheme
-                        .surfaceContainer, // Fix dropdown bg in dark mode
+                    dropdownColor: colorScheme.surfaceContainer,
                     style: TextStyle(color: colorScheme.onSurface),
                     items: const [
-                      DropdownMenuItem(value: 'newest', child: Text("Newest")),
+                      DropdownMenuItem(
+                        value: 'newest',
+                        child: Text("Mới nhất"),
+                      ),
                       DropdownMenuItem(
                         value: 'price_asc',
-                        child: Text("Price: Low to High"),
+                        child: Text("Giá: Thấp đến Cao"),
                       ),
                       DropdownMenuItem(
                         value: 'price_desc',
-                        child: Text("Price: High to Low"),
+                        child: Text("Giá: Cao đến Thấp"),
                       ),
                       DropdownMenuItem(
                         value: 'rating_desc',
-                        child: Text("Rating: Best"),
+                        child: Text("Đánh giá tốt nhất"),
                       ),
                     ],
                     onChanged: (val) {
@@ -379,7 +414,7 @@ class _FilterDrawerState extends ConsumerState<_FilterDrawer> {
                   // 2. In Stock Only
                   SwitchListTile(
                     title: Text(
-                      "In Stock Only",
+                      "Chỉ còn hàng",
                       style: TextStyle(color: colorScheme.onSurface),
                     ),
                     contentPadding: EdgeInsets.zero,
@@ -392,13 +427,13 @@ class _FilterDrawerState extends ConsumerState<_FilterDrawer> {
 
                   // 3. Price Range
                   Text(
-                    "Price Range",
+                    "Khoảng giá (đ)",
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: colorScheme.onSurface,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   Row(
                     children: [
                       Expanded(
@@ -407,27 +442,37 @@ class _FilterDrawerState extends ConsumerState<_FilterDrawer> {
                           keyboardType: TextInputType.number,
                           style: TextStyle(color: colorScheme.onSurface),
                           decoration: const InputDecoration(
-                            labelText: "Min",
+                            labelText: "Tối thiểu",
                             border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 10,
+                            ),
                           ),
-                          onSubmitted: (val) {
+                          onChanged: (val) {
+                            // Update provider state as user types or on submit
                             notifier.update(
                               filter.copyWith(priceMin: double.tryParse(val)),
                             );
                           },
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8.0),
+                        child: Text("-"),
+                      ),
                       Expanded(
                         child: TextField(
                           controller: _maxPriceCtrl,
                           keyboardType: TextInputType.number,
                           style: TextStyle(color: colorScheme.onSurface),
                           decoration: const InputDecoration(
-                            labelText: "Max",
+                            labelText: "Tối đa",
                             border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 10,
+                            ),
                           ),
-                          onSubmitted: (val) {
+                          onChanged: (val) {
                             notifier.update(
                               filter.copyWith(priceMax: double.tryParse(val)),
                             );
@@ -436,26 +481,18 @@ class _FilterDrawerState extends ConsumerState<_FilterDrawer> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Press Enter on keyboard to apply price",
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
                 ],
               ),
             ),
 
-            // Apply Button
+            // Bottom Action Button
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: FilledButton(
                 onPressed: () => Navigator.pop(context),
                 child: const SizedBox(
                   width: double.infinity,
-                  child: Center(child: Text("Done")),
+                  child: Center(child: Text("Áp dụng")),
                 ),
               ),
             ),
