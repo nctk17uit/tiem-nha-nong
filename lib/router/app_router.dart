@@ -22,6 +22,7 @@ import 'package:mobile/ui/screens/category_page.dart';
 import 'package:mobile/ui/screens/sub_category_page.dart';
 import 'package:mobile/ui/screens/product_list_page.dart';
 import 'package:mobile/ui/screens/product_detail_page.dart';
+import 'package:mobile/ui/screens/payment_result_page.dart';
 import 'package:mobile/ui/widgets/app_navigation_bar.dart';
 import 'package:mobile/models/category.dart';
 import 'package:mobile/models/shipping_address.dart';
@@ -183,6 +184,31 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/pushed-cart',
         builder: (context, state) => const CartPage(),
+      ),
+
+      // This matches: tiemnhanong://app/payment/success?orderCode=123
+      // Or:           tiemnhanong://app/payment/cancel?orderCode=123
+      GoRoute(
+        // Matches: /payment/success or /payment/cancel
+        path: '/payment/:status',
+        builder: (context, state) {
+          // 1. Get path parameter (success/cancel)
+          final status = state.pathParameters['status'];
+
+          // 2. Get query parameters (?orderCode=...&payosCode=...)
+          final orderCode = state.uri.queryParameters['orderCode'];
+          final payosCode = state.uri.queryParameters['payosCode'];
+
+          // 3. Determine logic
+          final isSuccess = status == 'success' && payosCode == '00';
+
+          // 4. Return the UI
+          return PaymentResultPage(
+            isSuccess: isSuccess,
+            orderCode: orderCode,
+            message: isSuccess ? null : 'Giao dịch bị hủy hoặc lỗi.',
+          );
+        },
       ),
     ],
   );

@@ -43,6 +43,7 @@ dependencies:
   flutter_slidable: ^4.0.3
   google_fonts: ^6.3.3
   url_launcher: ^6.3.2
+  app_links: ^6.4.1
 
 dev_dependencies:
   flutter_test:
