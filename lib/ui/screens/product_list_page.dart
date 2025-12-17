@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
-import '../../controllers/product_controller.dart';
-import '../../models/category.dart';
-import '../../models/product.dart';
+import 'package:mobile/controllers/product_controller.dart';
+import 'package:mobile/models/category.dart';
+import 'package:mobile/models/product.dart';
 
 class ProductListPage extends ConsumerStatefulWidget {
   final Category? category; // Passed from Drill-Down Navigation
@@ -47,22 +47,30 @@ class _ProductListPageState extends ConsumerState<ProductListPage> {
   @override
   Widget build(BuildContext context) {
     final asyncState = ref.watch(productListProvider);
-    final colorScheme = Theme.of(context).colorScheme; // Access current theme colors
+    final colorScheme = Theme.of(
+      context,
+    ).colorScheme; // Access current theme colors
+
+    // Logic to determine Page Title
+    final title = widget.category?.name ?? "Tất cả sản phẩm";
 
     return Scaffold(
       appBar: AppBar(
+        title: Text(title),
         backgroundColor: Colors.transparent,
         elevation: 0,
         // FIX: Wrap BackButton in a semi-transparent circle
         leading: Padding(
-          padding: const EdgeInsets.all(8.0), // Add padding to make circle smaller
+          padding: const EdgeInsets.all(
+            8.0,
+          ), // Add padding to make circle smaller
           child: CircleAvatar(
             // Dynamic background: White in Light Mode, Dark Grey in Dark Mode
-            backgroundColor: Theme.of(context).colorScheme.surface.withOpacity(0.8),
+            backgroundColor: Theme.of(
+              context,
+            ).colorScheme.surface.withOpacity(0.8),
             // Dynamic icon color: Black in Light Mode, White in Dark Mode
-            child: BackButton(
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+            child: BackButton(color: Theme.of(context).colorScheme.onSurface),
           ),
         ),
       ),
@@ -96,9 +104,9 @@ class _ProductListPageState extends ConsumerState<ProductListPage> {
                     Text(
                       "No Products Found",
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: colorScheme.onSurface,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        color: colorScheme.onSurface,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Padding(
@@ -195,9 +203,13 @@ class _ProductGridItem extends StatelessWidget {
                           Container(color: colorScheme.surfaceContainerHighest),
                     )
                   : Container(
-                      color: colorScheme.surfaceContainerHighest, // Dynamic placeholder
+                      color: colorScheme
+                          .surfaceContainerHighest, // Dynamic placeholder
                       child: Center(
-                        child: Icon(Icons.image, color: colorScheme.onSurfaceVariant),
+                        child: Icon(
+                          Icons.image,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ),
             ),
@@ -290,9 +302,9 @@ class _FilterDrawerState extends ConsumerState<_FilterDrawer> {
               padding: const EdgeInsets.all(16.0),
               child: Text(
                 "Filter Products",
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: colorScheme.onSurface,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(color: colorScheme.onSurface),
               ),
             ),
             const Divider(),
@@ -303,12 +315,16 @@ class _FilterDrawerState extends ConsumerState<_FilterDrawer> {
                   // 1. Sort By
                   Text(
                     "Sort By",
-                    style: TextStyle(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface,
+                    ),
                   ),
                   DropdownButton<String>(
                     value: filter.sortBy,
                     isExpanded: true,
-                    dropdownColor: colorScheme.surfaceContainer, // Fix dropdown bg in dark mode
+                    dropdownColor: colorScheme
+                        .surfaceContainer, // Fix dropdown bg in dark mode
                     style: TextStyle(color: colorScheme.onSurface),
                     items: const [
                       DropdownMenuItem(value: 'newest', child: Text("Newest")),
@@ -335,7 +351,10 @@ class _FilterDrawerState extends ConsumerState<_FilterDrawer> {
 
                   // 2. In Stock Only
                   SwitchListTile(
-                    title: Text("In Stock Only", style: TextStyle(color: colorScheme.onSurface)),
+                    title: Text(
+                      "In Stock Only",
+                      style: TextStyle(color: colorScheme.onSurface),
+                    ),
                     contentPadding: EdgeInsets.zero,
                     value: filter.inStockOnly,
                     onChanged: (val) {
@@ -347,7 +366,10 @@ class _FilterDrawerState extends ConsumerState<_FilterDrawer> {
                   // 3. Price Range
                   Text(
                     "Price Range",
-                    style: TextStyle(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Row(
@@ -390,7 +412,10 @@ class _FilterDrawerState extends ConsumerState<_FilterDrawer> {
                   const SizedBox(height: 8),
                   Text(
                     "Press Enter on keyboard to apply price",
-                    style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
