@@ -5,9 +5,10 @@ import 'package:go_router/go_router.dart';
 import 'package:mobile/controllers/product_controller.dart';
 import 'package:mobile/models/category.dart';
 import 'package:mobile/models/product.dart';
+import 'dart:async';
 
 class ProductListPage extends ConsumerStatefulWidget {
-  final Category? category; // Passed from Drill-Down Navigation
+  final Category? category;
   const ProductListPage({this.category, super.key});
 
   @override
@@ -16,12 +17,18 @@ class ProductListPage extends ConsumerStatefulWidget {
 
 class _ProductListPageState extends ConsumerState<ProductListPage> {
   final ScrollController _scrollController = ScrollController();
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
-    // 1. Initialize Filter with Category ID (if passed)
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Logic Fix: Reset existing filters (like search) before applying
+      // the new category context.
+      ref.read(productFilterProvider.notifier).reset();
+
       if (widget.category != null) {
         ref
             .read(productFilterProvider.notifier)
@@ -29,7 +36,6 @@ class _ProductListPageState extends ConsumerState<ProductListPage> {
       }
     });
 
-    // 2. Setup Infinite Scroll
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >=
           _scrollController.position.maxScrollExtent - 200) {
@@ -38,112 +44,93 @@ class _ProductListPageState extends ConsumerState<ProductListPage> {
     });
   }
 
+  void _onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      // Matches the fixed setCategory/setSearch methods
+      ref
+          .read(productFilterProvider.notifier)
+          .setSearch(query.isEmpty ? null : query);
+    });
+  }
+
   @override
   void dispose() {
     _scrollController.dispose();
+    _searchController.dispose();
+    _debounce?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final asyncState = ref.watch(productListProvider);
-    final colorScheme = Theme.of(
-      context,
-    ).colorScheme; // Access current theme colors
-
-    // Logic to determine Page Title
-    final title = widget.category?.name ?? "Tất cả sản phẩm";
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(title),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        // FIX: Wrap BackButton in a semi-transparent circle
-        leading: Padding(
-          padding: const EdgeInsets.all(
-            8.0,
-          ), // Add padding to make circle smaller
-          child: CircleAvatar(
-            // Dynamic background: White in Light Mode, Dark Grey in Dark Mode
-            backgroundColor: Theme.of(
-              context,
-            ).colorScheme.surface.withOpacity(0.8),
-            // Dynamic icon color: Black in Light Mode, White in Dark Mode
-            child: BackButton(color: Theme.of(context).colorScheme.onSurface),
+        title: Text(widget.category?.name ?? "Tất cả sản phẩm"),
+        actions: [
+          Builder(
+            builder: (context) {
+              return IconButton(
+                icon: const Icon(Icons.tune),
+                onPressed: () => Scaffold.of(context).openEndDrawer(),
+              );
+            },
+          ),
+        ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(60),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: TextField(
+              controller: _searchController,
+              onChanged: _onSearchChanged,
+              decoration: InputDecoration(
+                hintText: "Tìm kiếm sản phẩm...",
+                prefixIcon: const Icon(Icons.search),
+                filled: true,
+                fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: EdgeInsets.zero,
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          _onSearchChanged('');
+                        },
+                      )
+                    : null,
+              ),
+            ),
           ),
         ),
       ),
       endDrawer: const _FilterDrawer(),
       body: asyncState.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
-        data: (state) {
-          // --- EMPTY STATE HANDLING (THEMED) ---
-          if (state.products.isEmpty) {
-            return Center(
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        // Dynamic background color
-                        color: colorScheme.surfaceContainerHighest,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.inventory_2_outlined,
-                        size: 64,
-                        // Dynamic icon color
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      "No Products Found",
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: colorScheme.onSurface,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                      child: Text(
-                        widget.category != null
-                            ? "We couldn't find any products in '${widget.category!.name}'."
-                            : "Try adjusting your search or filters.",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: colorScheme.onSurfaceVariant),
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-
-                    // Action Button
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        if (widget.category != null) {
-                          context.pop();
-                        } else {
-                          Scaffold.of(context).openEndDrawer();
-                        }
-                      },
-                      icon: Icon(
-                        widget.category != null ? Icons.arrow_back : Icons.tune,
-                      ),
-                      label: Text(
-                        widget.category != null ? "Go Back" : "Change Filters",
-                      ),
-                    ),
-                  ],
-                ),
+        error: (err, stack) => Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text('Error: $err'),
+              ElevatedButton(
+                onPressed: () => ref.refresh(productListProvider),
+                child: const Text("Thử lại"),
               ),
-            );
+            ],
+          ),
+        ),
+        data: (state) {
+          if (state.products.isEmpty) {
+            return _buildEmptyState(context, colorScheme);
           }
 
-          // --- PRODUCT GRID ---
           return GridView.builder(
             controller: _scrollController,
             padding: const EdgeInsets.all(12),
@@ -162,6 +149,46 @@ class _ProductListPageState extends ConsumerState<ProductListPage> {
             },
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context, ColorScheme colorScheme) {
+    return Center(
+      child: SingleChildScrollView(
+        child: Column(
+          children: [
+            Icon(
+              Icons.search_off,
+              size: 80,
+              color: colorScheme.onSurfaceVariant.withOpacity(0.5),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              "Không tìm thấy sản phẩm",
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            const Text("Hãy thử điều chỉnh bộ lọc hoặc từ khóa tìm kiếm."),
+            const SizedBox(height: 24),
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _searchController.clear();
+                });
+                // Triggers reset logic in controller
+                ref.read(productFilterProvider.notifier).reset();
+                // Optionally restore the current category if applicable
+                if (widget.category != null) {
+                  ref
+                      .read(productFilterProvider.notifier)
+                      .setCategory(widget.category!.id);
+                }
+              },
+              child: const Text("Xóa tất cả bộ lọc"),
+            ),
+          ],
+        ),
       ),
     );
   }

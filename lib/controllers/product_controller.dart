@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/product.dart';
-import '../repositories/product_repository.dart';
+import 'package:mobile/models/product.dart';
+import 'package:mobile/repositories/product_repository.dart';
 
 // --- 1. FILTER STATE ---
 class ProductFilter {
@@ -14,29 +14,40 @@ class ProductFilter {
   ProductFilter({
     this.categoryId,
     this.search,
-    this.sortBy = 'newest', // Default sort
+    this.sortBy = 'newest',
     this.priceMin,
     this.priceMax,
     this.inStockOnly = false,
   });
 
+  // Helper to quickly check if any filter besides category is active
+  bool get hasActiveFilters =>
+      search != null ||
+      priceMin != null ||
+      priceMax != null ||
+      inStockOnly ||
+      sortBy != 'newest';
+
+  // FIX: Using a pattern that allows explicitly passing null to clear filters
   ProductFilter copyWith({
-    String? categoryId,
-    String? search,
+    Object? categoryId = _sentinel,
+    Object? search = _sentinel,
     String? sortBy,
-    double? priceMin,
-    double? priceMax,
+    Object? priceMin = _sentinel,
+    Object? priceMax = _sentinel,
     bool? inStockOnly,
   }) {
     return ProductFilter(
-      categoryId: categoryId ?? this.categoryId,
-      search: search ?? this.search,
+      categoryId: categoryId == _sentinel ? this.categoryId : (categoryId as String?),
+      search: search == _sentinel ? this.search : (search as String?),
       sortBy: sortBy ?? this.sortBy,
-      priceMin: priceMin ?? this.priceMin,
-      priceMax: priceMax ?? this.priceMax,
+      priceMin: priceMin == _sentinel ? this.priceMin : (priceMin as double?),
+      priceMax: priceMax == _sentinel ? this.priceMax : (priceMax as double?),
       inStockOnly: inStockOnly ?? this.inStockOnly,
     );
   }
+
+  static const _sentinel = Object();
 }
 
 class ProductFilterNotifier extends Notifier<ProductFilter> {
@@ -44,13 +55,23 @@ class ProductFilterNotifier extends Notifier<ProductFilter> {
   ProductFilter build() => ProductFilter();
 
   void update(ProductFilter newFilter) => state = newFilter;
-  void setCategory(String id) => state = state.copyWith(categoryId: id);
+
+  // Logic to allow explicitly clearing search or category by passing null
+  void setCategory(String? id) => state = state.copyWith(categoryId: id);
+
+  // Implement the setSearch method for your ProductListPage search bar
+  void setSearch(String? query) => state = state.copyWith(search: query);
+
+  // IMPLEMENTED: Resets the state to default ProductFilter values
+  void reset() {
+    state = ProductFilter();
+  }
 }
 
 final productFilterProvider =
     NotifierProvider<ProductFilterNotifier, ProductFilter>(
-      ProductFilterNotifier.new,
-    );
+  ProductFilterNotifier.new,
+);
 
 // --- 2. PAGINATION STATE ---
 class ProductPaginationState {
@@ -114,7 +135,7 @@ class ProductListController extends AsyncNotifier<ProductPaginationState> {
     );
 
     return existingState.copyWith(
-      products: [...existingState.products, ...newProducts],
+      products: page == 1 ? newProducts : [...existingState.products, ...newProducts],
       page: page,
       hasMore: newProducts.length >= limit,
       isLoadingMore: false,
@@ -125,8 +146,9 @@ class ProductListController extends AsyncNotifier<ProductPaginationState> {
     final currentState = state.value;
     if (currentState == null ||
         !currentState.hasMore ||
-        currentState.isLoadingMore)
+        currentState.isLoadingMore) {
       return;
+    }
 
     state = AsyncValue.data(currentState.copyWith(isLoadingMore: true));
 
@@ -143,12 +165,12 @@ class ProductListController extends AsyncNotifier<ProductPaginationState> {
 
 final productListProvider =
     AsyncNotifierProvider<ProductListController, ProductPaginationState>(
-      ProductListController.new,
-    );
+  ProductListController.new,
+);
 
 // Family Provider: Fetches details for a specific Product ID
-final productDetailProvider = FutureProvider.family
-    .autoDispose<Product, String>((ref, id) async {
-      final repository = ref.read(productRepositoryProvider);
-      return repository.getProductDetail(id);
-    });
+final productDetailProvider =
+    FutureProvider.family.autoDispose<Product, String>((ref, id) async {
+  final repository = ref.read(productRepositoryProvider);
+  return repository.getProductDetail(id);
+});
