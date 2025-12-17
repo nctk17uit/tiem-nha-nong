@@ -13,17 +13,21 @@ class AddressListPage extends ConsumerWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
+    // 1. Check for Selection Mode
+    final bool isSelectionMode = GoRouterState.of(context).uri.queryParameters['select'] == 'true';
+
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: const Text('Sổ địa chỉ'),
+        // 2. Dynamic Title
+        title: Text(isSelectionMode ? 'Chọn địa chỉ' : 'Sổ địa chỉ'),
         centerTitle: true,
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          // Navigate to Add Form (No extra data)
+          // Navigate to Add Form
           context.push('/addresses/form');
         },
         backgroundColor: Colors.orange[700],
@@ -78,7 +82,10 @@ class AddressListPage extends ConsumerWidget {
             separatorBuilder: (context, index) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final address = addresses[index];
-              return _AddressCard(address: address);
+              return _AddressCard(
+                address: address,
+                isSelectionMode: isSelectionMode,
+              );
             },
           );
         },
@@ -89,8 +96,12 @@ class AddressListPage extends ConsumerWidget {
 
 class _AddressCard extends ConsumerWidget {
   final ShippingAddress address;
+  final bool isSelectionMode;
 
-  const _AddressCard({required this.address});
+  const _AddressCard({
+    required this.address,
+    required this.isSelectionMode,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -102,146 +113,172 @@ class _AddressCard extends ConsumerWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
+          // Highlight border if default or if selected (logic could be expanded)
           color: address.isDefault
               ? colorScheme.primary
               : colorScheme.outline.withOpacity(0.3),
           width: address.isDefault ? 1.5 : 1,
         ),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Row 1: Name, Tag, and MENU
-            Row(
-              children: [
-                Expanded(
-                  child: Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          address.fullName,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (address.isDefault) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: colorScheme.primaryContainer,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
+      child: InkWell(
+        // 3. Selection Logic on Tap
+        onTap: isSelectionMode
+            ? () => context.pop(address) // Return the address
+            : null, // No tap action in management mode (use menu)
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Row 1: Name, Tag, and MENU/CHECK
+              Row(
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Flexible(
                           child: Text(
-                            'Mặc định',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: colorScheme.onPrimaryContainer,
+                            address.fullName,
+                            style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (address.isDefault) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colorScheme.primaryContainer,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              'Mặc định',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: colorScheme.onPrimaryContainer,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+
+                  // 4. Action Button Logic
+                  if (isSelectionMode)
+                    Icon(Icons.chevron_right, color: colorScheme.outline)
+                  else
+                    // Only show management menu if NOT in selection mode
+                    PopupMenuButton<String>(
+                      icon: Icon(
+                        Icons.more_vert,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      onSelected: (value) async {
+                        final controller = ref.read(
+                          addressControllerProvider.notifier,
+                        );
+                        switch (value) {
+                          case 'default':
+                            await controller.setDefault(address);
+                            break;
+                          case 'edit':
+                            context.push('/addresses/form', extra: address);
+                            break;
+                          case 'delete':
+                            _confirmDelete(context, ref, address.id);
+                            break;
+                        }
+                      },
+                      itemBuilder: (context) => [
+                        if (!address.isDefault)
+                          const PopupMenuItem(
+                            value: 'default',
+                            child: Row(
+                              children: [
+                                Icon(Icons.check_circle_outline, size: 20),
+                                SizedBox(width: 8),
+                                Text('Đặt làm mặc định'),
+                              ],
+                            ),
+                          ),
+                        const PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit, size: 20),
+                              SizedBox(width: 8),
+                              Text('Sửa'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.delete_outline,
+                                color: Colors.red,
+                                size: 20,
+                              ),
+                              SizedBox(width: 8),
+                              Text('Xóa', style: TextStyle(color: Colors.red)),
+                            ],
                           ),
                         ),
                       ],
-                    ],
-                  ),
-                ),
-                // --- NEW: Popup Menu for Actions ---
-                PopupMenuButton<String>(
-                  icon: Icon(
-                    Icons.more_vert,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                  onSelected: (value) async {
-                    final controller = ref.read(
-                      addressControllerProvider.notifier,
-                    );
-                    switch (value) {
-                      case 'default':
-                        await controller.setDefault(address);
-                        break;
-                      case 'edit':
-                        context.push('/addresses/form', extra: address);
-                        break;
-                      case 'delete':
-                        _confirmDelete(context, ref, address.id);
-                        break;
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    // Only show "Set Default" if it's NOT already default
-                    if (!address.isDefault)
-                      const PopupMenuItem(
-                        value: 'default',
-                        child: Row(
-                          children: [
-                            Icon(Icons.check_circle_outline, size: 20),
-                            SizedBox(width: 8),
-                            Text('Đặt làm mặc định'),
-                          ],
-                        ),
-                      ),
-                    const PopupMenuItem(
-                      value: 'edit',
-                      child: Row(
-                        children: [
-                          Icon(Icons.edit, size: 20),
-                          SizedBox(width: 8),
-                          Text('Sửa'),
-                        ],
-                      ),
                     ),
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.delete_outline,
-                            color: Colors.red,
-                            size: 20,
-                          ),
-                          SizedBox(width: 8),
-                          Text('Xóa', style: TextStyle(color: Colors.red)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+                ],
+              ),
 
-            // ... (Rest of your UI: Phone, Address Text) ...
-            Text(
-              address.phoneNumber,
-              style: TextStyle(color: colorScheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: 8),
-            const Divider(height: 1),
-            const SizedBox(height: 8),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  Icons.location_on_outlined,
-                  size: 18,
-                  color: colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    address.fullAddress,
-                    style: TextStyle(color: colorScheme.onSurface, height: 1.3),
+              Text(
+                address.phoneNumber,
+                style: TextStyle(color: colorScheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: 8),
+              const Divider(height: 1),
+              const SizedBox(height: 8),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.location_on_outlined,
+                    size: 18,
+                    color: colorScheme.primary,
                   ),
-                ),
-              ],
-            ),
-          ],
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      address.fullAddress,
+                      style: TextStyle(color: colorScheme.onSurface, height: 1.3),
+                    ),
+                  ),
+                ],
+              ),
+
+              // Helper text for selection mode
+              if (isSelectionMode) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    'Chạm để chọn',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: colorScheme.primary,
+                      fontStyle: FontStyle.italic
+                    ),
+                  ),
+                )
+              ]
+            ],
+          ),
         ),
       ),
     );

@@ -11,8 +11,7 @@ class AddressRepository {
   Future<List<ShippingAddress>> getAddresses() async {
     try {
       final response = await _dio.get('/users/me/addresses');
-      return (response.data as List)
-          .map((e) => ShippingAddress.fromJson(e))
+      return (response.data as List) .map((e) => ShippingAddress.fromJson(e))
           .toList();
     } on DioException catch (e) {
       throw e.response?.data['message'] ?? 'Failed to load addresses';

@@ -307,6 +307,9 @@ class ProfilePage extends ConsumerWidget {
                               _buildShoppingInfoCard(
                                 'Đơn hàng',
                                 Icons.shopping_bag_outlined,
+                                onTap: () {
+                                  context.push('/orders');
+                                },
                               ),
                               _buildShoppingInfoCard(
                                 'Địa chỉ',

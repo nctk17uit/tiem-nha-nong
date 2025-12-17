@@ -12,6 +12,9 @@ import 'package:mobile/ui/screens/change_password_page.dart';
 import 'package:mobile/ui/screens/address_list_page.dart';
 import 'package:mobile/ui/screens/add_edit_address_page.dart';
 import 'package:mobile/ui/screens/checkout_page.dart';
+import 'package:mobile/ui/screens/order_confirm_page.dart';
+import 'package:mobile/ui/screens/order_list_page.dart';
+import 'package:mobile/ui/screens/order_detail_page.dart';
 import 'package:mobile/ui/screens/splash_page.dart';
 import 'package:mobile/ui/screens/home_page.dart';
 import 'package:mobile/ui/screens/profile_page.dart';
@@ -88,6 +91,27 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/checkout',
         builder: (context, state) => const CheckoutPage(),
+      ),
+      GoRoute(
+        path: '/order-confirmed/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return OrderConfirmedPage(
+            orderId: id,
+          ); // You'll create this simple success page next
+        },
+      ),
+      GoRoute(
+        path: '/orders',
+        builder: (context, state) => const OrderListPage(),
+      ),
+      // Details (Dynamic ID)
+      GoRoute(
+        path: '/orders/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return OrderDetailPage(orderId: id);
+        },
       ),
       // --- MAIN APP SHELL (Bottom Nav) ---
       StatefulShellRoute.indexedStack(

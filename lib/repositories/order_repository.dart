@@ -13,25 +13,26 @@ class OrderRepository {
   Future<List<PaymentMethod>> getPaymentMethods() async {
     try {
       final response = await _dio.get('/payment-methods');
-      return (response.data['data'] as List)
-          .map((e) => PaymentMethod.fromJson(e))
-          .toList();
+
+      // --- FIX 1: Robust Response Handling ---
+      // Check if response is { data: [...] } OR just [...]
+      final rawData = (response.data is Map && response.data['data'] != null)
+          ? response.data['data']
+          : response.data;
+
+      if (rawData is! List) {
+        throw 'Unexpected response format: expected List';
+      }
+
+      return rawData.map((e) => PaymentMethod.fromJson(e)).toList();
+    } on DioException catch (e) {
+      throw e.response?.data['message'] ??
+          'Không thể tải phương thức thanh toán';
     } catch (e) {
-      // Fallback for offline dev testing
-      return [
-        PaymentMethod(
-          id: 'COD',
-          name: 'Cash on Delivery',
-          description: 'Pay when you receive',
-          isEnabled: true,
-        ),
-        PaymentMethod(
-          id: 'ONLINE',
-          name: 'Online Payment',
-          description: 'Pay via PayOS',
-          isEnabled: true,
-        ),
-      ];
+      // --- FIX 2: REMOVE THE FAKE DATA ---
+      // Throw the actual error so you can see it in the console
+      // instead of silently returning a hardcoded "Enabled" list.
+      throw 'Data parsing error: $e';
     }
   }
 
@@ -55,32 +56,60 @@ class OrderRepository {
   // 3. Create Order
   Future<Order> createOrder({
     required ShippingAddress address,
-    required String paymentMethod,
+    required String paymentMethod, // <--- We have the value right here!
     String? couponCode,
   }) async {
     try {
-      // API Call: POST /orders
       final response = await _dio.post(
         '/orders',
         data: {
-          // MAPPING: Your Model -> Backend Keys
           'shipping_name': address.fullName,
           'shipping_phone': address.phoneNumber,
-
-          // Use your helper getter for the full string
           'shipping_address': address.fullAddress,
-
           'province_code': address.provinceCode,
           'ward_code': address.wardCode,
-
           'payment_method': paymentMethod,
           'coupon_code': couponCode,
         },
       );
 
-      return Order.fromJson(response.data);
+      // 1. Get the data map (Handle wrapper if exists)
+      final Map<String, dynamic> responseData =
+          (response.data is Map && response.data['data'] != null)
+          ? Map<String, dynamic>.from(
+              response.data['data'],
+            ) // Create a modifiable copy
+          : Map<String, dynamic>.from(response.data);
+
+      // 2. PATCH: Inject the missing 'payment_method' that we already know
+      if (responseData['payment_method'] == null) {
+        responseData['payment_method'] = paymentMethod;
+      }
+
+      // 3. Parse
+      return Order.fromJson(responseData);
     } on DioException catch (e) {
       throw e.response?.data['message'] ?? 'Order creation failed';
+    }
+  }
+
+  // 4. Get Order History
+  Future<List<Order>> getMyOrders() async {
+    try {
+      final response = await _dio.get('/orders');
+      return (response.data as List).map((e) => Order.fromJson(e)).toList();
+    } catch (e) {
+      throw 'Failed to load orders';
+    }
+  }
+
+  // 5. Get Order Details
+  Future<Order> getOrderDetails(String idOrNumber) async {
+    try {
+      final response = await _dio.get('/orders/$idOrNumber');
+      return Order.fromJson(response.data);
+    } catch (e) {
+      throw 'Failed to load order details';
     }
   }
 }
