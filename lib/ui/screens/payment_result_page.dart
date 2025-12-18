@@ -113,7 +113,7 @@ class _PaymentResultPageState extends State<PaymentResultPage> {
                     if (widget.isSuccess) {
                       _goToConfirmation();
                     } else {
-                      context.go('/'); // Go home on failure
+                      context.go('/home');
                     }
                   },
                   child: Text(
