@@ -33,7 +33,6 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     final grandTotal = cartState.total - checkoutState.discountAmount;
 
     return Scaffold(
-      // 1. App Bar Title: "Thanh toán"
       appBar: AppBar(title: const Text('Thanh toán'), centerTitle: true),
       body: checkoutState.isLoading && checkoutState.availableMethods.isEmpty
           ? const Center(child: CircularProgressIndicator())
@@ -51,14 +50,12 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
 
                   // 2. Payment Methods Section
                   Text(
-                    'Phương thức thanh toán', // Payment Method
+                    'Phương thức thanh toán',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 8),
                   if (checkoutState.availableMethods.isEmpty)
-                    const Text(
-                      "Đang tải phương thức thanh toán...",
-                    ), // Loading...
+                    const Text("Đang tải phương thức thanh toán..."),
                   ...checkoutState.availableMethods.map(
                     (method) => _PaymentOptionTile(
                       method: method,
@@ -70,13 +67,11 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                   ),
                   const SizedBox(height: 24),
 
-                  // 3. Coupon Section
+                  // 3. Coupon Section - Fixed: Using _onApplyCoupon handler
                   _CouponSection(
                     controller: _couponController,
                     appliedCode: checkoutState.couponCode,
-                    onApply: (code) => ref
-                        .read(checkoutControllerProvider.notifier)
-                        .applyCoupon(code),
+                    onApply: _onApplyCoupon,
                     onRemove: () => ref
                         .read(checkoutControllerProvider.notifier)
                         .removeCoupon(),
@@ -98,7 +93,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
-          boxShadow: [BoxShadow(blurRadius: 10, color: Colors.black12)],
+          boxShadow: const [BoxShadow(blurRadius: 10, color: Colors.black12)],
         ),
         child: SafeArea(
           child: SizedBox(
@@ -119,7 +114,6 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                       child: CircularProgressIndicator(color: Colors.white),
                     )
                   : Text(
-                      // "Đặt hàng" = Place Order
                       'Đặt hàng • ${PriceFormatter.format(grandTotal)}',
                       style: const TextStyle(
                         fontSize: 16,
@@ -140,6 +134,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       '/addresses?select=true',
     );
 
+    if (!mounted) return; // Guarding context use after await
     if (selectedAddress != null) {
       ref.read(checkoutControllerProvider.notifier).setAddress(selectedAddress);
     }
@@ -151,10 +146,9 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
           .read(checkoutControllerProvider.notifier)
           .placeOrder();
 
-      if (!context.mounted) return;
+      if (!context.mounted) return; // Guarding context use after async gap
 
       if (order.paymentMethod == 'ONLINE' && order.checkoutUrl != null) {
-        // ... (Keep existing Online payment logic) ...
         final url = Uri.parse(order.checkoutUrl!);
         if (await canLaunchUrl(url)) {
           await launchUrl(url, mode: LaunchMode.externalApplication);
@@ -162,11 +156,26 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
           throw "Không thể mở trang thanh toán";
         }
       } else {
-        // --- UPDATE HERE ---
-        // Pass the short orderNumber instead of the long ID
         context.go('/order-confirmed/${order.orderNumber}');
       }
     } catch (e) {
+      if (!context.mounted) return; // Guarding context use inside catch block
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    }
+  }
+
+  void _onApplyCoupon(String code) async {
+    try {
+      await ref.read(checkoutControllerProvider.notifier).applyCoupon(code);
+      if (!mounted) return; // Guarding controller clear and context use
+      _couponController.clear();
+    } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(e.toString()),
@@ -194,12 +203,11 @@ class _ShippingSection extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Địa chỉ nhận hàng', // Shipping Address
+              'Địa chỉ nhận hàng',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             TextButton(
               onPressed: onTapChange,
-              // Add / Change
               child: Text(address == null ? 'Thêm' : 'Thay đổi'),
             ),
           ],
@@ -217,10 +225,7 @@ class _ShippingSection extends StatelessWidget {
                 color: Theme.of(context).colorScheme.outlineVariant,
               ),
             ),
-            child: const Center(
-              // Please select an address...
-              child: Text('Vui lòng chọn địa chỉ nhận hàng'),
-            ),
+            child: const Center(child: Text('Vui lòng chọn địa chỉ nhận hàng')),
           )
         else
           Container(
@@ -312,7 +317,8 @@ class _PaymentOptionTile extends StatelessWidget {
   }
 }
 
-class _CouponSection extends StatelessWidget {
+// Fixed: Inheriting from ConsumerWidget to access ref for discount amount
+class _CouponSection extends ConsumerWidget {
   final TextEditingController controller;
   final String? appliedCode;
   final Function(String) onApply;
@@ -328,8 +334,10 @@ class _CouponSection extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (appliedCode != null) {
+      final discount = ref.watch(checkoutControllerProvider).discountAmount;
+
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
@@ -342,12 +350,21 @@ class _CouponSection extends StatelessWidget {
             const Icon(Icons.local_offer, color: Colors.green, size: 20),
             const SizedBox(width: 8),
             Expanded(
-              child: Text(
-                'Đã áp dụng mã: $appliedCode', // Coupon applied
-                style: const TextStyle(
-                  color: Colors.green,
-                  fontWeight: FontWeight.bold,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Mã $appliedCode đã áp dụng',
+                    style: const TextStyle(
+                      color: Colors.green,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    'Tiết kiệm được ${PriceFormatter.format(discount)}',
+                    style: const TextStyle(color: Colors.green, fontSize: 12),
+                  ),
+                ],
               ),
             ),
             IconButton(
@@ -359,13 +376,14 @@ class _CouponSection extends StatelessWidget {
       );
     }
 
+    // Restored: UI for entering a coupon code
     return Row(
       children: [
         Expanded(
           child: TextField(
             controller: controller,
             decoration: const InputDecoration(
-              hintText: 'Nhập mã giảm giá', // Enter coupon code
+              hintText: 'Nhập mã giảm giá',
               border: OutlineInputBorder(),
               isDense: true,
             ),
@@ -374,7 +392,7 @@ class _CouponSection extends StatelessWidget {
         const SizedBox(width: 8),
         FilledButton(
           onPressed: isLoading ? null : () => onApply(controller.text),
-          child: const Text('Áp dụng'), // Apply
+          child: const Text('Áp dụng'),
         ),
       ],
     );
@@ -396,16 +414,10 @@ class _OrderSummary extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Tạm tính (Subtotal)
         _buildRow(context, 'Tạm tính', cartTotal),
-
-        // Giảm giá (Discount)
         if (discount > 0)
           _buildRow(context, 'Giảm giá', -discount, color: Colors.green),
-
         const Divider(height: 24),
-
-        // Tổng thanh toán (Total Payment)
         _buildRow(context, 'Tổng thanh toán', grandTotal, isBold: true),
       ],
     );

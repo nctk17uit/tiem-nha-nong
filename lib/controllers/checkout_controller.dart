@@ -25,7 +25,6 @@ class CheckoutState {
     this.error,
   });
 
-  // --- CRITICAL FIX: Add 'forceClearAddress' ---
   CheckoutState copyWith({
     ShippingAddress? selectedAddress,
     bool forceClearAddress = false, // If true, sets selectedAddress to null
@@ -37,7 +36,7 @@ class CheckoutState {
     String? error,
   }) {
     return CheckoutState(
-      // Logic: If force flag is on, use null. Else use new value or keep old value.
+      // If force flag is on, use null. Else use new value or keep old value.
       selectedAddress: forceClearAddress
           ? null
           : (selectedAddress ?? this.selectedAddress),
@@ -62,7 +61,15 @@ class CheckoutController extends Notifier<CheckoutState> {
       });
     });
 
-    // 2. Initialize Data
+    // 2. NEW: Sync Coupon with Cart Total
+    // If the cart total changes, re-apply the coupon to validate against new rules
+    ref.listen(cartControllerProvider, (previous, next) {
+      if (state.couponCode != null && previous?.total != next.total) {
+        applyCoupon(state.couponCode!);
+      }
+    });
+
+    // 3. Initialize Data
     Future(() async {
       await _loadPaymentMethods();
       await _loadDefaultAddress();
@@ -153,8 +160,6 @@ class CheckoutController extends Notifier<CheckoutState> {
     }
   }
 
-  // --- USER ACTIONS ---
-
   void setAddress(ShippingAddress address) {
     state = state.copyWith(selectedAddress: address);
   }
@@ -164,6 +169,8 @@ class CheckoutController extends Notifier<CheckoutState> {
   }
 
   Future<void> applyCoupon(String code) async {
+    if (code.isEmpty) return;
+
     state = state.copyWith(isLoading: true, error: null);
     final cartTotal = ref.read(cartControllerProvider).total;
 
@@ -171,19 +178,21 @@ class CheckoutController extends Notifier<CheckoutState> {
       final result = await ref
           .read(orderRepositoryProvider)
           .applyCoupon(code: code, cartTotal: cartTotal);
+
       state = state.copyWith(
         isLoading: false,
         couponCode: code,
         discountAmount: (result['discount_amount'] as num).toDouble(),
       );
     } catch (e) {
+      // Clear coupon data on error and store the message
       state = state.copyWith(
         isLoading: false,
         error: e.toString(),
         couponCode: null,
         discountAmount: 0,
       );
-      rethrow;
+      rethrow; // Rethrow so the UI can catch it for SnackBars
     }
   }
 

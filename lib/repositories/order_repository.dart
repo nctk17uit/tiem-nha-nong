@@ -14,8 +14,6 @@ class OrderRepository {
     try {
       final response = await _dio.get('/payment-methods');
 
-      // --- FIX 1: Robust Response Handling ---
-      // Check if response is { data: [...] } OR just [...]
       final rawData = (response.data is Map && response.data['data'] != null)
           ? response.data['data']
           : response.data;
@@ -29,9 +27,6 @@ class OrderRepository {
       throw e.response?.data['message'] ??
           'Không thể tải phương thức thanh toán';
     } catch (e) {
-      // --- FIX 2: REMOVE THE FAKE DATA ---
-      // Throw the actual error so you can see it in the console
-      // instead of silently returning a hardcoded "Enabled" list.
       throw 'Data parsing error: $e';
     }
   }
@@ -56,7 +51,7 @@ class OrderRepository {
   // 3. Create Order
   Future<Order> createOrder({
     required ShippingAddress address,
-    required String paymentMethod, // <--- We have the value right here!
+    required String paymentMethod,
     String? couponCode,
   }) async {
     try {
