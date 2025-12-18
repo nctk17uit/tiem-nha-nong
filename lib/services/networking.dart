@@ -3,12 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile/services/storage.dart';
 import 'package:mobile/controllers/auth_controller.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 final dioProvider = Provider<Dio>((ref) {
   final storage = ref.read(storageProvider);
 
   final options = BaseOptions(
-    baseUrl: 'http://192.168.240.1:3000/api/v1',
+    baseUrl: dotenv.env['APP_URL']!,
     connectTimeout: const Duration(seconds: 10),
     receiveTimeout: const Duration(seconds: 10),
   );
