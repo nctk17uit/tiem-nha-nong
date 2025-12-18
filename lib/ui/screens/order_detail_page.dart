@@ -109,23 +109,33 @@ class OrderDetailPage extends ConsumerWidget {
                 const Divider(height: 32),
 
                 // 3. Totals
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Column(
                   children: [
-                    const Text(
-                      'Tổng cộng',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                    // Subtotal (Tạm tính) = Final Total + Discount Saved
+                    _buildSummaryRow(
+                      'Tạm tính',
+                      PriceFormatter.format(
+                        order.totalAmount + order.discountAmount,
                       ),
                     ),
-                    Text(
-                      PriceFormatter.format(order.totalAmount),
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
+
+                    // Only show the Discount row if there was actually a discount
+                    if (order.discountAmount > 0)
+                      _buildSummaryRow(
+                        'Giảm giá',
+                        '-${PriceFormatter.format(order.discountAmount)}',
+                        valueColor: Colors.green,
                       ),
+
+                    const Divider(height: 24),
+
+                    // Final Total (Tổng cộng)
+                    _buildSummaryRow(
+                      'Tổng cộng',
+                      PriceFormatter.format(order.totalAmount),
+                      isBold: true,
+                      fontSize: 18,
+                      valueColor: Theme.of(context).colorScheme.primary,
                     ),
                   ],
                 ),
@@ -133,6 +143,38 @@ class OrderDetailPage extends ConsumerWidget {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildSummaryRow(
+    String label,
+    String value, {
+    bool isBold = false,
+    double fontSize = 16,
+    Color? valueColor,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: fontSize,
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: fontSize,
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              color: valueColor,
+            ),
+          ),
+        ],
       ),
     );
   }

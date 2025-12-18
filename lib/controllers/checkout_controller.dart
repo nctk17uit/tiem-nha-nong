@@ -31,6 +31,7 @@ class CheckoutState {
     PaymentMethod? selectedPayment,
     List<PaymentMethod>? availableMethods,
     String? couponCode,
+    bool forceClearCoupon = false, // Flag to explicitly clear coupon
     double? discountAmount,
     bool? isLoading,
     String? error,
@@ -43,7 +44,8 @@ class CheckoutState {
 
       selectedPayment: selectedPayment ?? this.selectedPayment,
       availableMethods: availableMethods ?? this.availableMethods,
-      couponCode: couponCode ?? this.couponCode,
+      // Use the force flag to allow nulling the coupon
+      couponCode: forceClearCoupon ? null : (couponCode ?? this.couponCode),
       discountAmount: discountAmount ?? this.discountAmount,
       isLoading: isLoading ?? this.isLoading,
       error: error,
@@ -76,6 +78,11 @@ class CheckoutController extends Notifier<CheckoutState> {
     });
 
     return CheckoutState();
+  }
+
+  // Implementation to correctly remove the coupon
+  void removeCoupon() {
+    state = state.copyWith(forceClearCoupon: true, discountAmount: 0);
   }
 
   // --- SYNC LOGIC ---
@@ -196,10 +203,6 @@ class CheckoutController extends Notifier<CheckoutState> {
     }
   }
 
-  void removeCoupon() {
-    state = state.copyWith(couponCode: null, discountAmount: 0);
-  }
-
   Future<Order> placeOrder() async {
     if (state.selectedAddress == null) throw "Please select a shipping address";
     if (state.selectedPayment == null) throw "Please select a payment method";
@@ -218,7 +221,14 @@ class CheckoutController extends Notifier<CheckoutState> {
       // Success! Clear cart locally.
       ref.read(cartControllerProvider.notifier).clearState();
 
-      state = state.copyWith(isLoading: false);
+      // Clear coupon and error state so the next checkout starts fresh
+      state = state.copyWith(
+        isLoading: false,
+        forceClearCoupon: true,
+        discountAmount: 0,
+        error: null,
+      );
+
       return order;
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());

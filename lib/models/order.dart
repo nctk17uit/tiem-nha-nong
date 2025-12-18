@@ -31,6 +31,7 @@ class Order {
   final String paymentStatus; // 'PENDING', 'PAID', 'PAY_LATER'
   final String paymentMethod; // 'COD', 'ONLINE'
   final double totalAmount;
+  final double discountAmount;
   final DateTime createdAt;
   final String? checkoutUrl; // For ONLINE payment redirect
   final List<OrderItem>? items;
@@ -41,6 +42,7 @@ class Order {
     required this.paymentStatus,
     required this.paymentMethod,
     required this.totalAmount,
+    required this.discountAmount,
     required this.createdAt,
     this.checkoutUrl,
     this.items,
@@ -58,6 +60,8 @@ class Order {
 
       // Robust parsing for decimal/numeric types
       totalAmount: double.tryParse(json['total_amount'].toString()) ?? 0.0,
+      discountAmount:
+          double.tryParse(json['discount_amount'].toString()) ?? 0.0,
 
       // Parse Date (Handle cases where it might be missing in older mocks)
       createdAt: json['created_at'] != null
