@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../controllers/category_controller.dart';
-import '../../models/category.dart';
+
 
 class CategoryPage extends ConsumerStatefulWidget {
   const CategoryPage({super.key});
