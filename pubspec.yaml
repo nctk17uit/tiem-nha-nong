@@ -76,6 +76,12 @@ flutter:
 
   assets:
     - assets/images/logo.jpg
+    - assets/images/banner1.png
+    - assets/images/banner2.png
+    - assets/images/banner3.png
+    - assets/images/sales_banner1.png
+    - assets/images/sales_banner2.png
+    - assets/images/sales_banner3.png
     - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see
