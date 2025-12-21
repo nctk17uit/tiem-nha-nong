@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -22,11 +23,15 @@ class HomePage extends ConsumerStatefulWidget {
 class _HomePageState extends ConsumerState<HomePage> {
   final CarouselSliderController _carouselController =
       CarouselSliderController();
+  final CarouselSliderController _salesCarouselController =
+      CarouselSliderController();
   int _bannerIndex = 0;
+  int _salesBannerIndex = 0;
 
   Category? _selectedCategory;
   List<Product> _products = [];
   bool _isLoading = false;
+  bool _footerExpanded = false;
 
   static const int _maxHomeCategories = 7;
 
@@ -252,7 +257,11 @@ class _HomePageState extends ConsumerState<HomePage> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final banners = List.generate(3, (i) => 'assets/images/logo.jpg');
+    final banners = [
+      'assets/images/banner1.png',
+      'assets/images/banner2.png',
+      'assets/images/banner3.png',
+    ];
     final categoriesAsync = ref.watch(categoryTreeProvider);
 
     return Scaffold(
@@ -323,7 +332,303 @@ class _HomePageState extends ConsumerState<HomePage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 20),
+
+                const SizedBox(height: 24),
+                // Sales banner
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 4,
+                            height: 18,
+                            decoration: BoxDecoration(
+                              color: Colors.orange,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            'Ưu đãi / Combo tiết kiệm',
+                            style: GoogleFonts.roboto(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 124,
+                        child: Column(
+                          children: [
+                            Expanded(
+                              child: Builder(
+                                builder: (context) {
+                                  final salesViewportFraction =
+                                      220 / MediaQuery.of(context).size.width;
+                                  return CarouselSlider.builder(
+                                    carouselController:
+                                        _salesCarouselController,
+                                    itemCount: 3,
+                                    itemBuilder: (context, index, _) {
+                                      return Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                        ),
+                                        child: Container(
+                                          width: 220,
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            color: Colors.grey[100],
+                                          ),
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            child: AspectRatio(
+                                              aspectRatio: 16 / 9,
+                                              child: Stack(
+                                                fit: StackFit.expand,
+                                                children: [
+                                                  Image.asset(
+                                                    'assets/images/sales_banner${index + 1}.png',
+                                                    fit: BoxFit.cover,
+                                                    width: double.infinity,
+                                                    height: double.infinity,
+                                                  ),
+                                                  AnimatedContainer(
+                                                    duration: const Duration(
+                                                      milliseconds: 220,
+                                                    ),
+                                                    color:
+                                                        _salesBannerIndex ==
+                                                            index
+                                                        ? Colors.transparent
+                                                        : Colors.black
+                                                              .withOpacity(
+                                                                0.38,
+                                                              ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    options: CarouselOptions(
+                                      height: double.infinity,
+                                      viewportFraction: salesViewportFraction,
+                                      autoPlay: true,
+                                      enableInfiniteScroll: true,
+                                      onPageChanged: (i, _) =>
+                                          setState(() => _salesBannerIndex = i),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: List.generate(
+                                3,
+                                (i) => Container(
+                                  width: 8,
+                                  height: 8,
+                                  margin: const EdgeInsets.symmetric(
+                                    horizontal: 4,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: i == _salesBannerIndex
+                                        ? colorScheme.primary
+                                        : Colors.grey.withOpacity(0.3),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                // Footer
+                Container(
+                  width: double.infinity,
+                  color: colorScheme.primary,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 22,
+                    horizontal: 16,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Toggle button to expand / collapse footer
+                      IconButton(
+                        onPressed: () =>
+                            setState(() => _footerExpanded = !_footerExpanded),
+                        icon: AnimatedRotation(
+                          turns: _footerExpanded ? 0.0 : 0.5,
+                          duration: const Duration(milliseconds: 220),
+                          child: Icon(
+                            Icons.keyboard_arrow_up,
+                            color: colorScheme.onPrimary.withOpacity(0.7),
+                            size: 20,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 6),
+
+                      AnimatedCrossFade(
+                        firstChild: const SizedBox.shrink(),
+                        secondChild: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Vertical link list
+                            Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                TextButton(
+                                  onPressed: () {},
+                                  child: Text(
+                                    'Chính sách đổi trả',
+                                    style: GoogleFonts.roboto(
+                                      fontSize: 14,
+                                      color: colorScheme.onPrimary,
+                                    ),
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () {},
+                                  child: Text(
+                                    'Liên hệ',
+                                    style: GoogleFonts.roboto(
+                                      fontSize: 14,
+                                      color: colorScheme.onPrimary,
+                                    ),
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () {},
+                                  child: Text(
+                                    'Zalo OA',
+                                    style: GoogleFonts.roboto(
+                                      fontSize: 14,
+                                      color: colorScheme.onPrimary,
+                                    ),
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () {},
+                                  child: Text(
+                                    'Hotline',
+                                    style: GoogleFonts.roboto(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: colorScheme.onPrimary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 8),
+
+                            // Social icons
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                IconButton(
+                                  onPressed: () {},
+                                  icon: Icon(
+                                    Icons.facebook,
+                                    color: colorScheme.onPrimary,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                IconButton(
+                                  onPressed: () {},
+                                  icon: Icon(
+                                    Icons.share,
+                                    color: colorScheme.onPrimary,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                IconButton(
+                                  onPressed: () {},
+                                  icon: Icon(
+                                    Icons.ondemand_video,
+                                    color: colorScheme.onPrimary,
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 8),
+
+                            Text(
+                              '© ${DateTime.now().year} Tiem Nha Nong etc',
+                              style: GoogleFonts.roboto(
+                                fontSize: 12,
+                                color: colorScheme.onPrimary.withOpacity(0.7),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                TextButton(
+                                  onPressed: () {},
+                                  child: Text(
+                                    'Privacy & terms',
+                                    style: GoogleFonts.roboto(
+                                      fontSize: 12,
+                                      color: colorScheme.onPrimary.withOpacity(
+                                        0.7,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                TextButton(
+                                  onPressed: () {},
+                                  child: Text(
+                                    'Security',
+                                    style: GoogleFonts.roboto(
+                                      fontSize: 12,
+                                      color: colorScheme.onPrimary.withOpacity(
+                                        0.7,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        crossFadeState: _footerExpanded
+                            ? CrossFadeState.showSecond
+                            : CrossFadeState.showFirst,
+                        duration: const Duration(milliseconds: 220),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 24),
               ],
             ),
           );
@@ -333,8 +638,8 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Widget _buildCarousel(List<String> banners, ColorScheme colorScheme) {
-    return SizedBox(
-      height: 200,
+    return AspectRatio(
+      aspectRatio: 16 / 9,
       child: Column(
         children: [
           Expanded(
@@ -348,10 +653,21 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: Image.asset(
-                    banners[index],
-                    fit: BoxFit.cover,
-                    width: double.infinity,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.asset(
+                        banners[index],
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                      ),
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 220),
+                        color: _bannerIndex == index
+                            ? Colors.transparent
+                            : Colors.black.withOpacity(0.38),
+                      ),
+                    ],
                   ),
                 ),
               ),
