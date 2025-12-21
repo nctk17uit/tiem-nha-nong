@@ -323,8 +323,11 @@ class ProfilePage extends ConsumerWidget {
                                 Icons.favorite_outline,
                               ),
                               _buildShoppingInfoCard(
-                                'Ưu đãi',
-                                Icons.star_outline,
+                                'Hỗ trợ',
+                                Icons.help_outline,
+                                onTap: () {
+                                  context.push('/support');
+                                },
                               ),
                             ],
                           ),

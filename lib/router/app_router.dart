@@ -4,6 +4,7 @@ import 'package:mobile/controllers/auth_controller.dart';
 import 'package:mobile/ui/screens/cart_page.dart';
 import 'package:mobile/ui/screens/login_page.dart';
 import 'package:mobile/ui/screens/register_page.dart';
+import 'package:mobile/ui/screens/support_chat_page.dart';
 import 'package:mobile/ui/screens/verification_page.dart';
 import 'package:mobile/ui/screens/forgot_password_page.dart';
 import 'package:mobile/ui/screens/reset_password_page.dart';
@@ -219,6 +220,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             message: isSuccess ? null : 'Giao dịch bị hủy hoặc lỗi.',
           );
         },
+      ),
+
+      GoRoute(
+        path: '/support',
+        builder: (context, state) => const SupportChatPage(),
       ),
     ],
   );
