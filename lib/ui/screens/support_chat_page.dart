@@ -16,7 +16,6 @@ class SupportChatPage extends ConsumerWidget {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    // Access the current theme colors
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
@@ -27,19 +26,22 @@ class SupportChatPage extends ConsumerWidget {
         foregroundColor: colorScheme.onPrimary,
         elevation: 0,
       ),
-      body: Tawk(
-        directChatLink:
-            'https://tawk.to/chat/694806f40b00e71980bdd252/1jd0lmbr2',
-        visitor: TawkVisitor(
-          name: isGuest ? 'Guest' : user.name,
-          email: isGuest ? 'guest@example.com' : user.email,
-        ),
-        onLoad: () {
-          debugPrint('Tawk.to loaded successfully');
-        },
-        placeholder: Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+      // Wrap the body in SafeArea to handle notches and home indicators
+      body: SafeArea(
+        child: Tawk(
+          directChatLink:
+              'https://tawk.to/chat/694806f40b00e71980bdd252/1jd0lmbr2',
+          visitor: TawkVisitor(
+            name: isGuest ? 'Guest' : user.name,
+            email: isGuest ? 'guest@example.com' : user.email,
+          ),
+          onLoad: () {
+            debugPrint('Tawk.to loaded successfully');
+          },
+          placeholder: Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+            ),
           ),
         ),
       ),
