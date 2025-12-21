@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:async';
+import 'package:carousel_slider/carousel_slider.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 // Infrastructure Imports
 import '../../models/product.dart';
@@ -20,8 +22,7 @@ class HomePage extends ConsumerStatefulWidget {
 
 class _HomePageState extends ConsumerState<HomePage> {
   // --- UI State ---
-  final PageController _bannerController = PageController(initialPage: 1);
-  Timer? _bannerTimer;
+  final CarouselSliderController _carouselController = CarouselSliderController();
   int _bannerIndex = 0;
 
   Category? _selectedCategory;
@@ -34,7 +35,6 @@ class _HomePageState extends ConsumerState<HomePage> {
   @override
   void initState() {
     super.initState();
-    _startBannerTimer();
   }
 
   Future<void> _fetchProducts(String categoryId) async {
@@ -98,24 +98,10 @@ class _HomePageState extends ConsumerState<HomePage> {
     }
   }
 
-  void _startBannerTimer() {
-    _bannerTimer?.cancel();
-    _bannerTimer = Timer.periodic(const Duration(seconds: 7), (timer) {
-      if (_bannerController.hasClients) {
-        _bannerIndex = (_bannerIndex + 1) % 3;
-        _bannerController.animateToPage(
-          _bannerIndex,
-          duration: const Duration(milliseconds: 400),
-          curve: Curves.easeInOut,
-        );
-      }
-    });
-  }
+
 
   @override
   void dispose() {
-    _bannerTimer?.cancel();
-    _bannerController.dispose();
     super.dispose();
   }
 
@@ -159,29 +145,68 @@ class _HomePageState extends ConsumerState<HomePage> {
                 // 1. Banner
                 SizedBox(
                   height: 200,
-                  child: PageView.builder(
-                    controller: _bannerController,
-                    itemCount: banners.length,
-                    itemBuilder: (context, index) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12.0,
-                          vertical: 8.0,
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.asset(
-                            banners[index],
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            errorBuilder: (_, __, ___) => Container(
-                              color: colorScheme.surfaceContainerHighest,
-                            ),
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: CarouselSlider.builder(
+                          carouselController: _carouselController,
+                          itemCount: banners.length,
+                          itemBuilder: (context, index, realIdx) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12.0,
+                                vertical: 8.0,
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.asset(
+                                  banners[index],
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  errorBuilder: (_, __, ___) => Container(
+                                    color: colorScheme.surfaceContainerHighest,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                          options: CarouselOptions(
+                            height: double.infinity,
+                            viewportFraction: 1.0,
+                            enableInfiniteScroll: true,
+                            autoPlay: true,
+                            autoPlayInterval: const Duration(seconds: 7),
+                            autoPlayAnimationDuration:
+                                const Duration(milliseconds: 400),
+                            enlargeCenterPage: false,
+                            onPageChanged: (i, reason) {
+                              setState(() => _bannerIndex = i);
+                            },
                           ),
                         ),
-                      );
-                    },
-                    onPageChanged: (i) => _bannerIndex = i,
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(banners.length, (i) {
+                          final isActive = i == _bannerIndex;
+                          return GestureDetector(
+                            onTap: () => _carouselController.animateToPage(i),
+                            child: Container(
+                              width: isActive ? 10 : 8,
+                              height: isActive ? 10 : 8,
+                              margin: const EdgeInsets.symmetric(horizontal: 4),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: isActive
+                                    ? colorScheme.primary
+                                    : colorScheme.onSurface.withOpacity(0.2),
+                              ),
+                            ),
+                          );
+                        }),
+                      ),
+                    ],
                   ),
                 ),
 
@@ -406,7 +431,88 @@ class _HomePageState extends ConsumerState<HomePage> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 40),
+
+                      const SizedBox(height: 12),
+
+                      // Nguồn gốc & chứng nhận (image placeholders, replace with DB images later)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(width: 4, height: 18, decoration: BoxDecoration(color: const Color(0xFF41B93D), borderRadius: BorderRadius.circular(2))),
+                                const SizedBox(width: 10),
+                                Text('Nguồn gốc & chứng nhận', style: GoogleFonts.roboto(fontSize: 16, fontWeight: FontWeight.w700)),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              height: 110,
+                              child: ListView.separated(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: 4,
+                                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                                itemBuilder: (context, index) {
+                                  return Container(
+                                    width: 200,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(8),
+                                      color: Colors.grey[100],
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.asset('assets/images/logo.jpg', fit: BoxFit.cover),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // Ưu đãi
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(width: 4, height: 18, decoration: BoxDecoration(color: Colors.orange, borderRadius: BorderRadius.circular(2))),
+                                const SizedBox(width: 10),
+                                Text('Ưu đãi / Combo tiết kiệm', style: GoogleFonts.roboto(fontSize: 16, fontWeight: FontWeight.w700)),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              height: 120,
+                              child: ListView.separated(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: 3,
+                                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                                itemBuilder: (context, index) {
+                                  return Container(
+                                    width: 220,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(8),
+                                      color: Colors.grey[100],
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.asset('assets/images/logo.jpg', fit: BoxFit.cover),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -421,7 +527,6 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
     // ... (Keep existing AppBar code)
-    final colorScheme = Theme.of(context).colorScheme;
     return AppBar(
       title: Text("Trang Chủ", style: TextStyle(fontWeight: FontWeight.bold)),
       centerTitle: true,
