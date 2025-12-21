@@ -53,7 +53,6 @@ class CartController extends Notifier<CartState> {
   }
 
   // --- ADD ITEM ---
-  // --- ADD ITEM ---
   Future<void> addToCart({
     required Product product,
     required ProductVariant variant,

@@ -1,17 +1,15 @@
+import 'dart:async';
+import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'dart:async';
-import 'package:carousel_slider/carousel_slider.dart';
-import 'package:google_fonts/google_fonts.dart';
 
-// Infrastructure Imports
-import '../../models/product.dart';
-import '../../models/category.dart';
-import '../../controllers/cart_controller.dart';
-import '../../controllers/category_controller.dart';
-import '../../repositories/product_repository.dart';
-import '../../utils/elements_format.dart';
+import 'package:mobile/models/product.dart';
+import 'package:mobile/models/category.dart';
+import 'package:mobile/controllers/cart_controller.dart';
+import 'package:mobile/controllers/category_controller.dart';
+import 'package:mobile/repositories/product_repository.dart';
+import 'package:mobile/utils/elements_format.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -22,7 +20,8 @@ class HomePage extends ConsumerStatefulWidget {
 
 class _HomePageState extends ConsumerState<HomePage> {
   // --- UI State ---
-  final CarouselSliderController _carouselController = CarouselSliderController();
+  final CarouselSliderController _carouselController =
+      CarouselSliderController();
   int _bannerIndex = 0;
 
   Category? _selectedCategory;
@@ -62,7 +61,6 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Future<void> _addToCart(Product product) async {
-    // ... (Keep existing logic: check variants, call controller)
     ProductVariant? variantToAdd;
     if (product.hasVariants && product.variants.isNotEmpty) {
       context.push('/product/${product.id}');
@@ -97,8 +95,6 @@ class _HomePageState extends ConsumerState<HomePage> {
       }
     }
   }
-
-
 
   @override
   void dispose() {
@@ -176,8 +172,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                             enableInfiniteScroll: true,
                             autoPlay: true,
                             autoPlayInterval: const Duration(seconds: 7),
-                            autoPlayAnimationDuration:
-                                const Duration(milliseconds: 400),
+                            autoPlayAnimationDuration: const Duration(
+                              milliseconds: 400,
+                            ),
                             enlargeCenterPage: false,
                             onPageChanged: (i, reason) {
                               setState(() => _bannerIndex = i);
@@ -431,92 +428,10 @@ class _HomePageState extends ConsumerState<HomePage> {
                           ),
                         ),
                       ),
-
-                      const SizedBox(height: 12),
-
-                      // Nguồn gốc & chứng nhận (image placeholders, replace with DB images later)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(width: 4, height: 18, decoration: BoxDecoration(color: const Color(0xFF41B93D), borderRadius: BorderRadius.circular(2))),
-                                const SizedBox(width: 10),
-                                Text('Nguồn gốc & chứng nhận', style: GoogleFonts.roboto(fontSize: 16, fontWeight: FontWeight.w700)),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            SizedBox(
-                              height: 110,
-                              child: ListView.separated(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: 4,
-                                separatorBuilder: (_, __) => const SizedBox(width: 12),
-                                itemBuilder: (context, index) {
-                                  return Container(
-                                    width: 200,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(8),
-                                      color: Colors.grey[100],
-                                    ),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Image.asset('assets/images/logo.jpg', fit: BoxFit.cover),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      // Ưu đãi
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(width: 4, height: 18, decoration: BoxDecoration(color: Colors.orange, borderRadius: BorderRadius.circular(2))),
-                                const SizedBox(width: 10),
-                                Text('Ưu đãi / Combo tiết kiệm', style: GoogleFonts.roboto(fontSize: 16, fontWeight: FontWeight.w700)),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            SizedBox(
-                              height: 120,
-                              child: ListView.separated(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: 3,
-                                separatorBuilder: (_, __) => const SizedBox(width: 12),
-                                itemBuilder: (context, index) {
-                                  return Container(
-                                    width: 220,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(8),
-                                      color: Colors.grey[100],
-                                    ),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Image.asset('assets/images/logo.jpg', fit: BoxFit.cover),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 12),
               ],
             ),
           );
@@ -526,7 +441,6 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
-    // ... (Keep existing AppBar code)
     return AppBar(
       title: Text("Trang Chủ", style: TextStyle(fontWeight: FontWeight.bold)),
       centerTitle: true,
@@ -553,7 +467,6 @@ class _HomePageState extends ConsumerState<HomePage> {
     ColorScheme colorScheme,
     TextTheme textTheme,
   ) {
-    // ... (Keep existing Product Card code)
     return GestureDetector(
       onTap: () => context.push('/product/${p.id}'),
       child: Container(
