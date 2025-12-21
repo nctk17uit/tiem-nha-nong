@@ -31,6 +31,7 @@ class CartPage extends ConsumerWidget {
       (sum, item) => sum + (item.price * item.quantity),
     );
 
+
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
@@ -39,7 +40,7 @@ class CartPage extends ConsumerWidget {
         toolbarHeight: 56,
         iconTheme: IconThemeData(color: colorScheme.onPrimary),
         title: Text(
-          'Giỏ hàng - ${cartItems.length}',
+          'Giỏ hàng - ${cartState.itemCount}',
           style: textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w600,
             color: colorScheme.onPrimary,

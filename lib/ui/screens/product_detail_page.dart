@@ -49,7 +49,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
               child: Consumer(
                 builder: (context, ref, child) {
                   final cartState = ref.watch(cartControllerProvider);
-                  final itemCount = cartState.items.length;
+                  final itemCount = cartState.itemCount;
 
                   return Stack(
                     clipBehavior: Clip.none,
