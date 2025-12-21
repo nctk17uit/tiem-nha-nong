@@ -20,6 +20,7 @@ import 'package:mobile/ui/screens/home_page.dart';
 import 'package:mobile/ui/screens/profile_page.dart';
 import 'package:mobile/ui/screens/category_page.dart';
 import 'package:mobile/ui/screens/sub_category_page.dart';
+import 'package:mobile/ui/screens/news_page.dart';
 import 'package:mobile/ui/screens/product_list_page.dart';
 import 'package:mobile/ui/screens/product_detail_page.dart';
 import 'package:mobile/ui/screens/payment_result_page.dart';
@@ -153,7 +154,16 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
-          // Tab 3: Cart
+          // Tab 3: News
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/news',
+                builder: (context, state) => const NewsPage(),
+              ),
+            ],
+          ),
+          // Tab 4: Cart
           StatefulShellBranch(
             routes: [
               GoRoute(

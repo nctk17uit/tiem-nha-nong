@@ -19,6 +19,7 @@ class ScaffoldWithNavBar extends StatelessWidget {
         destinations: const [
           NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Trang chủ'),
           NavigationDestination(icon: Icon(Icons.category_outlined), label: 'Danh mục'),
+          NavigationDestination(icon: Icon(Icons.article_outlined), label: 'Tin tức'),
           NavigationDestination(icon: Icon(Icons.shopping_cart_outlined), label: 'Giỏ hàng'),
           NavigationDestination(icon: Icon(Icons.person_outlined), label: 'Tài khoản'),
         ],
