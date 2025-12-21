@@ -20,7 +20,8 @@ class HomePage extends ConsumerStatefulWidget {
 }
 
 class _HomePageState extends ConsumerState<HomePage> {
-  final CarouselSliderController _carouselController = CarouselSliderController();
+  final CarouselSliderController _carouselController =
+      CarouselSliderController();
   int _bannerIndex = 0;
 
   Category? _selectedCategory;
@@ -58,8 +59,6 @@ class _HomePageState extends ConsumerState<HomePage> {
     }
   }
 
-  // --- FIXED LOGIC: Handling Simple vs Variable Products ---
-
   Future<void> _addToCart(Product product) async {
     if (!product.isActive) return;
 
@@ -76,7 +75,9 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     try {
       // 1. Always fetch full data to ensure variants are present (for simple and variable)
-      final fullProduct = await ref.read(productDetailProvider(product.id).future);
+      final fullProduct = await ref.read(
+        productDetailProvider(product.id).future,
+      );
 
       // 2. Safe Navigator pop
       if (dialogContext != null && dialogContext!.mounted) {
@@ -94,7 +95,9 @@ class _HomePageState extends ConsumerState<HomePage> {
         // Handle simple product logic by taking the first variant (activeVariant = variants.first)
         await _performAddToCart(fullProduct, fullProduct.variants.first);
       } else {
-        throw Exception("Sản phẩm hiện không khả dụng (thiếu dữ liệu phân loại)");
+        throw Exception(
+          "Sản phẩm hiện không khả dụng (thiếu dữ liệu phân loại)",
+        );
       }
     } catch (e) {
       if (dialogContext != null && dialogContext!.mounted) {
@@ -143,8 +146,11 @@ class _HomePageState extends ConsumerState<HomePage> {
                         borderRadius: BorderRadius.circular(8),
                         child: Image.network(
                           product.thumbnailUrl ?? '',
-                          width: 80, height: 80, fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const Icon(Icons.image, size: 80),
+                          width: 80,
+                          height: 80,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                              const Icon(Icons.image, size: 80),
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -152,9 +158,15 @@ class _HomePageState extends ConsumerState<HomePage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(product.name, style: textTheme.titleMedium, maxLines: 2),
                             Text(
-                              PriceFormatter.format(selectedVariant?.price ?? product.price),
+                              product.name,
+                              style: textTheme.titleMedium,
+                              maxLines: 2,
+                            ),
+                            Text(
+                              PriceFormatter.format(
+                                selectedVariant?.price ?? product.price,
+                              ),
                               style: textTheme.titleLarge?.copyWith(
                                 color: colorScheme.primary,
                                 fontWeight: FontWeight.bold,
@@ -173,14 +185,17 @@ class _HomePageState extends ConsumerState<HomePage> {
                     runSpacing: 8,
                     children: product.variants.map((variant) {
                       final isSelected = selectedVariant?.id == variant.id;
-                      final bool isAvailable = variant.stockQuantity > 0 && variant.isActive;
+                      final bool isAvailable =
+                          variant.stockQuantity > 0 && variant.isActive;
 
                       return ChoiceChip(
                         label: Text(variant.name),
                         selected: isSelected,
-                        onSelected: !isAvailable ? null : (selected) {
-                          setModalState(() => selectedVariant = variant);
-                        },
+                        onSelected: !isAvailable
+                            ? null
+                            : (selected) {
+                                setModalState(() => selectedVariant = variant);
+                              },
                       );
                     }).toList(),
                   ),
@@ -207,13 +222,14 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  Future<void> _performAddToCart(Product product, ProductVariant variant) async {
+  Future<void> _performAddToCart(
+    Product product,
+    ProductVariant variant,
+  ) async {
     try {
-      await ref.read(cartControllerProvider.notifier).addToCart(
-            product: product,
-            variant: variant,
-            quantity: 1,
-          );
+      await ref
+          .read(cartControllerProvider.notifier)
+          .addToCart(product: product, variant: variant, quantity: 1);
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -232,8 +248,6 @@ class _HomePageState extends ConsumerState<HomePage> {
     }
   }
 
-  // --- UI Build Methods (Layout Fixes for Overflows) ---
-
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -248,7 +262,8 @@ class _HomePageState extends ConsumerState<HomePage> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err')),
         data: (allCategories) {
-          if (allCategories.isEmpty) return const Center(child: Text('No categories found'));
+          if (allCategories.isEmpty)
+            return const Center(child: Text('No categories found'));
 
           if (_selectedCategory == null && allCategories.isNotEmpty) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -259,7 +274,9 @@ class _HomePageState extends ConsumerState<HomePage> {
             });
           }
 
-          final displayCategories = allCategories.take(_maxHomeCategories).toList();
+          final displayCategories = allCategories
+              .take(_maxHomeCategories)
+              .toList();
           final hasMore = allCategories.length > _maxHomeCategories;
 
           return SingleChildScrollView(
@@ -268,10 +285,45 @@ class _HomePageState extends ConsumerState<HomePage> {
               children: [
                 _buildCarousel(banners, colorScheme),
                 const SizedBox(height: 12),
-                _buildCategoryStrip(displayCategories, hasMore, colorScheme, textTheme),
+                _buildCategoryStrip(
+                  displayCategories,
+                  hasMore,
+                  colorScheme,
+                  textTheme,
+                ),
                 const SizedBox(height: 12),
                 _buildProductGrid(colorScheme, textTheme),
-                const SizedBox(height: 12),
+                const SizedBox(height: 20),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12.0,
+                  ), // Matches _buildProductGrid
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        context.push('/category/products');
+                      },
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: BorderSide(color: colorScheme.primary),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: Icon(Icons.storefront, color: colorScheme.primary),
+                      label: Text(
+                        "Xem tất cả sản phẩm",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
               ],
             ),
           );
@@ -290,10 +342,17 @@ class _HomePageState extends ConsumerState<HomePage> {
               carouselController: _carouselController,
               itemCount: banners.length,
               itemBuilder: (context, index, _) => Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12.0,
+                  vertical: 8.0,
+                ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: Image.asset(banners[index], fit: BoxFit.cover, width: double.infinity),
+                  child: Image.asset(
+                    banners[index],
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                  ),
                 ),
               ),
               options: CarouselOptions(
@@ -306,17 +365,32 @@ class _HomePageState extends ConsumerState<HomePage> {
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(banners.length, (i) => Container(
-              width: 8, height: 8, margin: const EdgeInsets.symmetric(horizontal: 4),
-              decoration: BoxDecoration(shape: BoxShape.circle, color: i == _bannerIndex ? colorScheme.primary : Colors.grey.withOpacity(0.3)),
-            )),
+            children: List.generate(
+              banners.length,
+              (i) => Container(
+                width: 8,
+                height: 8,
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: i == _bannerIndex
+                      ? colorScheme.primary
+                      : Colors.grey.withOpacity(0.3),
+                ),
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCategoryStrip(List<Category> displayCategories, bool hasMore, ColorScheme colorScheme, TextTheme textTheme) {
+  Widget _buildCategoryStrip(
+    List<Category> displayCategories,
+    bool hasMore,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
     return Container(
       color: colorScheme.surfaceContainerLow,
       padding: const EdgeInsets.symmetric(vertical: 10),
@@ -328,20 +402,39 @@ class _HomePageState extends ConsumerState<HomePage> {
         separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
           if (hasMore && index == displayCategories.length) {
-            return _buildCategoryItem(null, "Xem tất cả", Icons.grid_view_rounded, colorScheme, textTheme);
+            return _buildCategoryItem(
+              null,
+              "Xem tất cả",
+              Icons.grid_view_rounded,
+              colorScheme,
+              textTheme,
+            );
           }
           final cat = displayCategories[index];
-          return _buildCategoryItem(cat, cat.name, Icons.grass, colorScheme, textTheme);
+          return _buildCategoryItem(
+            cat,
+            cat.name,
+            Icons.grass,
+            colorScheme,
+            textTheme,
+          );
         },
       ),
     );
   }
 
-  Widget _buildCategoryItem(Category? cat, String name, IconData icon, ColorScheme colorScheme, TextTheme textTheme) {
+  Widget _buildCategoryItem(
+    Category? cat,
+    String name,
+    IconData icon,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
     final selected = cat?.id == _selectedCategory?.id;
     return GestureDetector(
       onTap: () {
-        if (cat == null) context.go('/category');
+        if (cat == null)
+          context.go('/category');
         else {
           setState(() => _selectedCategory = cat);
           _fetchProducts(cat.id);
@@ -350,22 +443,33 @@ class _HomePageState extends ConsumerState<HomePage> {
       child: Column(
         children: [
           Container(
-            width: 64, height: 64,
+            width: 64,
+            height: 64,
             decoration: BoxDecoration(
-              shape: BoxShape.circle, color: colorScheme.surface,
-              border: Border.all(color: selected ? colorScheme.primary : colorScheme.outlineVariant, width: selected ? 2 : 1),
+              shape: BoxShape.circle,
+              color: colorScheme.surface,
+              border: Border.all(
+                color: selected
+                    ? colorScheme.primary
+                    : colorScheme.outlineVariant,
+                width: selected ? 2 : 1,
+              ),
             ),
-            child: Icon(icon, color: selected ? colorScheme.primary : colorScheme.onSurface),
+            child: Icon(
+              icon,
+              color: selected ? colorScheme.primary : colorScheme.onSurface,
+            ),
           ),
           const SizedBox(height: 8),
           SizedBox(
             width: 72,
             child: Text(
-              name, textAlign: TextAlign.center,
+              name,
+              textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: textTheme.bodySmall?.copyWith(fontSize: 11),
-            )
+            ),
           ),
         ],
       ),
@@ -380,42 +484,92 @@ class _HomePageState extends ConsumerState<HomePage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(_selectedCategory?.name ?? 'Sản phẩm', style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-              TextButton(onPressed: () => context.push('/category/products', extra: _selectedCategory), child: const Text("Xem thêm")),
+              Text(
+                _selectedCategory?.name ?? 'Sản phẩm',
+                style: textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              TextButton(
+                onPressed: () => context.push(
+                  '/category/products',
+                  extra: _selectedCategory,
+                ),
+                child: const Text("Xem thêm"),
+              ),
             ],
           ),
-          if (_isLoading) const Center(child: CircularProgressIndicator())
-          else GridView.builder(
+          if (_isLoading)
+            const Center(child: CircularProgressIndicator())
+          else
+            GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2, childAspectRatio: 0.65, mainAxisSpacing: 12, crossAxisSpacing: 12,
+                crossAxisCount: 2,
+                childAspectRatio: 0.65,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
               ),
               itemCount: _products.length,
-              itemBuilder: (context, index) => _buildProductCard(_products[index], colorScheme, textTheme),
+              itemBuilder: (context, index) =>
+                  _buildProductCard(_products[index], colorScheme, textTheme),
             ),
         ],
       ),
     );
   }
 
-  Widget _buildProductCard(Product p, ColorScheme colorScheme, TextTheme textTheme) {
+  Widget _buildProductCard(
+    Product p,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
     return GestureDetector(
       onTap: () => context.push('/product/${p.id}'),
       child: Container(
-        decoration: BoxDecoration(border: Border.all(color: colorScheme.outlineVariant), borderRadius: BorderRadius.circular(8)),
+        decoration: BoxDecoration(
+          border: Border.all(color: colorScheme.outlineVariant),
+          borderRadius: BorderRadius.circular(8),
+        ),
         child: Column(
           children: [
-            Expanded(child: Image.network(p.thumbnailUrl ?? '', fit: BoxFit.cover, width: double.infinity, errorBuilder: (_, __, ___) => const Icon(Icons.image))),
+            Expanded(
+              child: Image.network(
+                p.thumbnailUrl ?? '',
+                fit: BoxFit.cover,
+                width: double.infinity,
+                errorBuilder: (_, __, ___) => const Icon(Icons.image),
+              ),
+            ),
             Padding(
               padding: const EdgeInsets.all(8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(p.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold)),
-                  Text(PriceFormatter.format(p.price), style: TextStyle(color: colorScheme.primary, fontWeight: FontWeight.bold)),
+                  Text(
+                    p.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    PriceFormatter.format(p.price),
+                    style: TextStyle(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  SizedBox(width: double.infinity, child: FilledButton(onPressed: () => _addToCart(p), child: const Text("Thêm vào giỏ"))),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: () => _addToCart(p),
+                      child: const Text("Thêm vào giỏ"),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -426,14 +580,27 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
-    return AppBar(title: const Text("Trang Chủ", style: TextStyle(fontWeight: FontWeight.bold)), centerTitle: true, actions: [
-      Consumer(builder: (context, ref, _) {
-        final count = ref.watch(cartControllerProvider).itemCount;
-        return IconButton(
-          icon: Badge(label: Text('$count'), isLabelVisible: count > 0, child: const Icon(Icons.shopping_cart_outlined)),
-          onPressed: () => context.push('/cart'),
-        );
-      }),
-    ]);
+    return AppBar(
+      title: const Text(
+        "Trang Chủ",
+        style: TextStyle(fontWeight: FontWeight.bold),
+      ),
+      centerTitle: true,
+      actions: [
+        Consumer(
+          builder: (context, ref, _) {
+            final count = ref.watch(cartControllerProvider).itemCount;
+            return IconButton(
+              icon: Badge(
+                label: Text('$count'),
+                isLabelVisible: count > 0,
+                child: const Icon(Icons.shopping_cart_outlined),
+              ),
+              onPressed: () => context.push('/cart'),
+            );
+          },
+        ),
+      ],
+    );
   }
 }
