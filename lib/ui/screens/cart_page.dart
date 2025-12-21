@@ -31,7 +31,6 @@ class CartPage extends ConsumerWidget {
       (sum, item) => sum + (item.price * item.quantity),
     );
 
-
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
@@ -53,26 +52,27 @@ class CartPage extends ConsumerWidget {
       body: cartState.isLoading
           ? const Center(child: CircularProgressIndicator())
           : cartItems.isEmpty
-          ? _buildEmptyState(context)
-          : CartList(
-              cartItems: cartItems,
-              onRemoveItem: (item) {
-                ref.read(cartControllerProvider.notifier).removeItem(item);
-              },
-              onUpdateQuantity: (item, qty) {
-                if (qty > 0) {
-                  ref
-                      .read(cartControllerProvider.notifier)
-                      .updateQuantity(item, qty);
-                }
-              },
-            ),
+              ? _buildEmptyState(context)
+              : CartList(
+                  cartItems: cartItems,
+                  onRemoveItem: (item) {
+                    ref.read(cartControllerProvider.notifier).removeItem(item);
+                  },
+                  onUpdateQuantity: (item, qty) {
+                    if (qty > 0) {
+                      ref
+                          .read(cartControllerProvider.notifier)
+                          .updateQuantity(item, qty);
+                    }
+                  },
+                ),
 
+      // SỬA TẠI ĐÂY: Sử dụng SafeArea trong bottomNavigationBar
       bottomNavigationBar: _buildBottomBar(
         context,
         cartItems.isEmpty,
         totalPrice,
-        isLoggedIn, // Pass login state to bottom bar
+        isLoggedIn,
       ),
     );
   }
@@ -128,8 +128,7 @@ class CartPage extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(24),
               ),
             ),
-            onPressed: () =>
-                context.go('/home'), // Use .go to return to main tab
+            onPressed: () => context.go('/home'),
             child: Text(
               'Mua sắm ngay',
               style: textTheme.labelLarge?.copyWith(
@@ -154,7 +153,7 @@ class CartPage extends ConsumerWidget {
     final textTheme = theme.textTheme;
 
     return Container(
-      height: 80, // Increased slightly for better tap area
+      // Bỏ height cố định để SafeArea tự tính toán chiều cao phù hợp với thiết bị
       decoration: BoxDecoration(
         color: colorScheme.surface,
         border: Border(
@@ -168,63 +167,64 @@ class CartPage extends ConsumerWidget {
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Tổng cộng',
-                  style: textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
+      child: SafeArea(
+        // SafeArea đảm bảo nội dung không bị vạch Home của iPhone che mất
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min, // Sử dụng min để ôm sát nội dung
+                children: [
+                  Text(
+                    'Tổng cộng',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                   ),
+                  Text(
+                    PriceFormatter.format(totalPrice),
+                    style: textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: Colors.red[700],
+                    ),
+                  ),
+                ],
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colorScheme.primary,
+                  foregroundColor: colorScheme.onPrimary,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  elevation: 2,
                 ),
-                Text(
-                  PriceFormatter.format(totalPrice),
-                  style: textTheme.titleLarge?.copyWith(
+                onPressed: isEmpty
+                    ? null
+                    : () {
+                        if (isLoggedIn) {
+                          context.push('/checkout');
+                        } else {
+                          context.push('/login', extra: '/checkout');
+                        }
+                      },
+                child: Text(
+                  'Thanh toán',
+                  style: textTheme.labelLarge?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: Colors.red[700], // Highlight price
+                    fontSize: 16,
                   ),
                 ),
-              ],
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: colorScheme.primary,
-                foregroundColor: colorScheme.onPrimary,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 12,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                elevation: 2,
               ),
-              onPressed: isEmpty
-                  ? null
-                  : () {
-                      if (isLoggedIn) {
-                        // 1. Logged in -> Go to Checkout
-                        context.push('/checkout');
-                      } else {
-                        // 2. Not Logged in -> Go to Login, then Redirect to Checkout
-                        context.push('/login', extra: '/checkout');
-                      }
-                    },
-              child: Text(
-                'Thanh toán',
-                style: textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

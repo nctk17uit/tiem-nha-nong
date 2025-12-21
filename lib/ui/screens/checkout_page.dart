@@ -89,37 +89,53 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                 ],
               ),
             ),
-      bottomSheet: Container(
-        padding: const EdgeInsets.all(16),
+      // Thay thế phần bottomSheet hiện tại bằng bottomNavigationBar
+      bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
-          boxShadow: const [BoxShadow(blurRadius: 10, color: Colors.black12)],
+          boxShadow: [
+            BoxShadow(
+              blurRadius: 10,
+              color: Colors.black.withOpacity(0.05),
+              offset: const Offset(0, -5),
+            ),
+          ],
         ),
         child: SafeArea(
-          child: SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: checkoutState.isLoading
-                  ? null
-                  : () => _handlePlaceOrder(context, grandTotal),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                foregroundColor: Colors.white,
-              ),
-              child: checkoutState.isLoading
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(color: Colors.white),
-                    )
-                  : Text(
-                      'Đặt hàng • ${PriceFormatter.format(grandTotal)}',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+          // bottom: true đảm bảo nó tính toán khoảng cách vạch điều hướng iOS/Android
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: checkoutState.isLoading
+                    ? null
+                    : () => _handlePlaceOrder(context, grandTotal),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: checkoutState.isLoading
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Text(
+                        'Đặt hàng • ${PriceFormatter.format(grandTotal)}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
+              ),
             ),
           ),
         ),
