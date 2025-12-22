@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../controllers/category_controller.dart';
 
-
 class CategoryPage extends ConsumerStatefulWidget {
   const CategoryPage({super.key});
 
@@ -41,7 +40,11 @@ class _CategoryPageState extends ConsumerState<CategoryPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Categories"),
+        title: const Text(
+          "Danh mục sản phẩm",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),
           child: Padding(

@@ -16,7 +16,7 @@ class _NewsPageState extends State<NewsPage> {
       'excerpt': 'Title cho bài viết số ${i + 1}.',
       'image': 'https://picsum.photos/seed/news${i + 1}/400/200',
       'date': '21/12/2025',
-      'author': 'Tác giả ${i + 1}'
+      'author': 'Tác giả ${i + 1}',
     },
   );
 
@@ -43,8 +43,10 @@ class _NewsPageState extends State<NewsPage> {
     final list = _articles.where((a) {
       final title = a['title']!.toLowerCase();
       final excerpt = a['excerpt']!.toLowerCase();
-      final matchesQuery = q.isEmpty || title.contains(q) || excerpt.contains(q);
-      final matchesFilter = _activeFilter == 'Tất cả' || a['title']!.contains(_activeFilter);
+      final matchesQuery =
+          q.isEmpty || title.contains(q) || excerpt.contains(q);
+      final matchesFilter =
+          _activeFilter == 'Tất cả' || a['title']!.contains(_activeFilter);
       return matchesQuery && matchesFilter;
     }).toList();
     return list;
@@ -54,7 +56,10 @@ class _NewsPageState extends State<NewsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tin tức'),
+        title: const Text(
+          "Tin tức",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
         elevation: 1,
       ),
@@ -78,7 +83,10 @@ class _NewsPageState extends State<NewsPage> {
                           borderSide: BorderSide.none,
                         ),
                         filled: true,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 0,
+                          horizontal: 12,
+                        ),
                       ),
                       onChanged: (v) => setState(() => _searchQuery = v),
                     ),
@@ -105,7 +113,13 @@ class _NewsPageState extends State<NewsPage> {
                     else
                       _featuredCard(context, _articles.first),
                     const SizedBox(height: 12),
-                    const Text('Mới nhất', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const Text(
+                      'Mới nhất',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                   ],
                 ),
@@ -114,77 +128,117 @@ class _NewsPageState extends State<NewsPage> {
 
             // Articles list
             SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  if (_isLoading) return _articlePlaceholder();
+              delegate: SliverChildBuilderDelegate((context, index) {
+                if (_isLoading) return _articlePlaceholder();
 
-                  final list = _filteredArticles;
-                  if (index >= list.length) return const SizedBox.shrink();
-                  final a = list[index];
+                final list = _filteredArticles;
+                if (index >= list.length) return const SizedBox.shrink();
+                final a = list[index];
 
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    child: Card(
-                      clipBehavior: Clip.hardEdge,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      child: InkWell(
-                        onTap: () {
-                          // TODO: Navigate to news detail page when implemented
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mở chi tiết bài viết (chưa triển khai)')));
-                        },
-                        child: Row(
-                          children: [
-                            SizedBox(
-                              width: 120,
-                              height: 100,
-                              child: Image.network(a['image']!, fit: BoxFit.cover),
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  child: Card(
+                    clipBehavior: Clip.hardEdge,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: InkWell(
+                      onTap: () {
+                        // TODO: Navigate to news detail page when implemented
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Mở chi tiết bài viết (chưa triển khai)',
                             ),
-                            Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.all(12.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(a['title']!, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                    const SizedBox(height: 8),
-                                    Text(a['excerpt']!, maxLines: 2, overflow: TextOverflow.ellipsis),
-                                    const SizedBox(height: 8),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(a['date']!, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                                        Text(a['author']!, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                                      ],
-                                    )
-                                  ],
-                                ),
+                          ),
+                        );
+                      },
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 120,
+                            height: 100,
+                            child: Image.network(
+                              a['image']!,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.all(12.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    a['title']!,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    a['excerpt']!,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        a['date']!,
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                      Text(
+                                        a['author']!,
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
-                  );
-                },
-                childCount: _isLoading ? 6 : _filteredArticles.length,
-              ),
+                  ),
+                );
+              }, childCount: _isLoading ? 6 : _filteredArticles.length),
             ),
 
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 16,
+                  horizontal: 24,
+                ),
                 child: Center(
                   child: TextButton.icon(
                     onPressed: () {
                       // load more placeholder
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tải thêm (chưa triển khai)')));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Tải thêm (chưa triển khai)'),
+                        ),
+                      );
                     },
                     icon: const Icon(Icons.refresh),
                     label: const Text('Tải thêm'),
                   ),
                 ),
               ),
-            )
+            ),
           ],
         ),
       ),
@@ -193,7 +247,11 @@ class _NewsPageState extends State<NewsPage> {
 
   Widget _featuredCard(BuildContext context, Map<String, String> article) {
     return GestureDetector(
-      onTap: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mở bài viết tiêu điểm (chưa triển khai)'))),
+      onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Mở bài viết tiêu điểm (chưa triển khai)'),
+        ),
+      ),
       child: AspectRatio(
         aspectRatio: 16 / 8,
         child: ClipRRect(
@@ -205,7 +263,10 @@ class _NewsPageState extends State<NewsPage> {
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Colors.black.withOpacity(0.4), Colors.black.withOpacity(0.08)],
+                    colors: [
+                      Colors.black.withOpacity(0.4),
+                      Colors.black.withOpacity(0.08),
+                    ],
                     begin: Alignment.bottomCenter,
                     end: Alignment.topCenter,
                   ),
@@ -218,12 +279,24 @@ class _NewsPageState extends State<NewsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(article['title']!, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                    Text(
+                      article['title']!,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 6),
-                    Text(article['excerpt']!, style: const TextStyle(color: Colors.white70), maxLines: 2, overflow: TextOverflow.ellipsis),
+                    Text(
+                      article['excerpt']!,
+                      style: const TextStyle(color: Colors.white70),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ],
                 ),
-              )
+              ),
             ],
           ),
         ),
@@ -247,7 +320,10 @@ class _NewsPageState extends State<NewsPage> {
     return AspectRatio(
       aspectRatio: 16 / 8,
       child: Container(
-        decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(12)),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade300,
+          borderRadius: BorderRadius.circular(12),
+        ),
       ),
     );
   }
@@ -269,15 +345,27 @@ class _NewsPageState extends State<NewsPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(height: 16, width: double.infinity, color: Colors.grey.shade300),
+                      Container(
+                        height: 16,
+                        width: double.infinity,
+                        color: Colors.grey.shade300,
+                      ),
                       const SizedBox(height: 8),
-                      Container(height: 12, width: 120, color: Colors.grey.shade200),
+                      Container(
+                        height: 12,
+                        width: 120,
+                        color: Colors.grey.shade200,
+                      ),
                       const Spacer(),
-                      Container(height: 12, width: 80, color: Colors.grey.shade200),
+                      Container(
+                        height: 12,
+                        width: 80,
+                        color: Colors.grey.shade200,
+                      ),
                     ],
                   ),
                 ),
-              )
+              ),
             ],
           ),
         ),
