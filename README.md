@@ -2,16 +2,16 @@
 
 This repository contains a Flutter mobile application targeting Android, iOS, web, macOS, Linux, and Windows. The app follows a clean layered architecture to promote separation of concerns, testability, and scalability.
 
-##Key Solutions
+## Key Solutions
 -Digital Transformation: Transitions traditional agri-input trading to a modern mobile platform.
 -Transparency: Provides detailed product origins, usage instructions, and authentic user reviews to combat counterfeit goods.
 -Efficient Management: Integrated Admin Panel for real-time inventory tracking and order processing.
 
-##Input & Output
+## Input & Output
 -Input: User profiles, product catalogs (variants, pricing), orders, and payment details.
 -Output: Dynamic UI/UX for shopping, automated OTP verification via email, order status tracking, and sales analytics dashboards.
 
-##Technology Stack
+## Technology Stack
     -Frontend: Flutter (Cross-platform iOS/Android).
     -State Management: Riverpod.
     -Navigation: Go_router.
